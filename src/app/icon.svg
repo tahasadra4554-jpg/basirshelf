@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="BasirShelf">
+  <rect width="64" height="64" rx="16" fill="#1A365D" />
+  <g fill="none" stroke="#FDFBF7" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 45.5V21a4 4 0 0 1 4-4h18a2 2 0 0 1 2 2v26" />
+    <path d="M17 45.5A4.5 4.5 0 0 1 21.5 41H41" />
+    <path d="M41 41v8H21.5A4.5 4.5 0 0 1 17 45.5" />
+    <path d="M25 26.5h10" />
+  </g>
+  <rect x="15" y="52.5" width="30" height="3.2" rx="1.6" fill="#5A67D8" />
+</svg>
