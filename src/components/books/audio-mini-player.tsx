@@ -604,19 +604,19 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 {/* Left: Book Title "Interchange 1" in #FDFBF7 (serif), Subtitle in #FDFBF7, Institute in #FDFBF7 at 70% opacity */}
                 <div className="flex flex-col min-w-0 pr-2">
                   <h3
-                    className="font-serif text-[12px] sm:text-[14px] font-bold leading-none tracking-tight"
+                    className="font-serif text-[12px] sm:text-[14px] font-bold leading-none tracking-tight truncate"
                     style={{ color: "#FDFBF7" }}
                   >
                     {track.bookTitle || "Interchange 1"}
                   </h3>
                   <p
-                    className="font-sans text-[10px] sm:text-[11.5px] font-semibold leading-tight mt-1"
+                    className="font-sans text-[10px] sm:text-[11.5px] font-semibold leading-tight mt-1 truncate"
                     style={{ color: "#FDFBF7" }}
                   >
                     {track.title}
                   </p>
                   <p
-                    className="font-sans text-[8px] sm:text-[9.5px] font-medium leading-none mt-1"
+                    className="font-sans text-[8px] sm:text-[9.5px] font-medium leading-none mt-1 truncate"
                     style={{ color: "rgba(253, 251, 247, 0.7)" }}
                   >
                     Basir Language Institute
