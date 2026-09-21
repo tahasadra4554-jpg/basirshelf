@@ -55,9 +55,8 @@ export function AuthForm({
       toast.success(state.message ?? "Done.");
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("basirshelf:auth-change"));
+        window.location.href = redirectTo;
       }
-      router.push(redirectTo);
-      router.refresh();
     } else {
       toast.error(state.error);
     }
