@@ -17,7 +17,6 @@ import {
   Headphones,
   ImageIcon,
   Play,
-  RotateCw,
   X,
 } from "lucide-react";
 
@@ -170,6 +169,7 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
   const hasAudio = Boolean(section?.audio_url && section.audio_url.trim().length > 0);
   const hasHandout = Boolean(section?.handout_url && section.handout_url.trim().length > 0);
 
+  // FIX 2: Deeper, premium palette
   const options = [
     {
       id: "video" as const,
@@ -177,11 +177,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       subtitle: "Watch lesson video",
       icon: Play,
       baseAngle: 0,
-      badgeBg: "#EF4444",
-      badgeGlow: "0 0 30px rgba(239, 68, 68, 0.7)",
-      haloColor: "rgba(239, 68, 68, 0.5)",
-      labelColor: "#EF4444",
-      buttonGradient: "linear-gradient(135deg, #EF4444, #DC2626)",
+      badgeBg: "#DC2626",
+      badgeGlow: "0 0 30px rgba(220, 38, 38, 0.7)",
+      haloColor: "rgba(220, 38, 38, 0.6)",
+      radialGlow: "rgba(220, 38, 38, 0.15)",
+      labelColor: "#DC2626",
+      buttonGradient: "linear-gradient(135deg, #DC2626, #B91C1C)",
       available: hasVideo,
     },
     {
@@ -190,11 +191,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       subtitle: "Listen to audio lesson",
       icon: Headphones,
       baseAngle: 90,
-      badgeBg: "#8B5CF6",
-      badgeGlow: "0 0 30px rgba(139, 92, 246, 0.7)",
-      haloColor: "rgba(139, 92, 246, 0.5)",
-      labelColor: "#8B5CF6",
-      buttonGradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)",
+      badgeBg: "#7C3AED",
+      badgeGlow: "0 0 30px rgba(124, 58, 237, 0.7)",
+      haloColor: "rgba(124, 58, 237, 0.6)",
+      radialGlow: "rgba(124, 58, 237, 0.15)",
+      labelColor: "#7C3AED",
+      buttonGradient: "linear-gradient(135deg, #7C3AED, #6D28D9)",
       available: hasAudio,
     },
     {
@@ -203,11 +205,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       subtitle: "Open image gallery",
       icon: ImageIcon,
       baseAngle: 180,
-      badgeBg: "#10B981",
-      badgeGlow: "0 0 30px rgba(16, 185, 129, 0.7)",
-      haloColor: "rgba(16, 185, 129, 0.5)",
-      labelColor: "#10B981",
-      buttonGradient: "linear-gradient(135deg, #10B981, #059669)",
+      badgeBg: "#059669",
+      badgeGlow: "0 0 30px rgba(5, 150, 105, 0.7)",
+      haloColor: "rgba(5, 150, 105, 0.6)",
+      radialGlow: "rgba(5, 150, 105, 0.15)",
+      labelColor: "#059669",
+      buttonGradient: "linear-gradient(135deg, #059669, #047857)",
       available: hasImages,
     },
     {
@@ -216,11 +219,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       subtitle: "Read lesson handout",
       icon: FileText,
       baseAngle: 270,
-      badgeBg: "#3B82F6",
-      badgeGlow: "0 0 30px rgba(59, 130, 246, 0.7)",
-      haloColor: "rgba(59, 130, 246, 0.5)",
-      labelColor: "#3B82F6",
-      buttonGradient: "linear-gradient(135deg, #3B82F6, #2563EB)",
+      badgeBg: "#2563EB",
+      badgeGlow: "0 0 30px rgba(37, 99, 235, 0.7)",
+      haloColor: "rgba(37, 99, 235, 0.6)",
+      radialGlow: "rgba(37, 99, 235, 0.15)",
+      labelColor: "#2563EB",
+      buttonGradient: "linear-gradient(135deg, #2563EB, #1D4ED8)",
       available: hasHandout,
     },
   ];
@@ -396,7 +400,6 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
     return () => cancelAnimationFrame(raf);
   }, [spawnParticle, prefersReduced]);
 
-  // PROBLEM 2: Robust pointer drag handling for mouse + touch
   const handleWindowPointerMove = useCallback(
     (e: PointerEvent) => {
       if (!isDraggingRef.current) return;
@@ -410,7 +413,6 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       if (frameDelta < -180) frameDelta += 360;
       angularVelocity.current = frameDelta;
       lastPointerAngle.current = currentAngle;
-      // Use requestAnimationFrame for smooth 60fps
       requestAnimationFrame(() => {
         rawRotation.set(startRotation.current + delta);
       });
@@ -459,7 +461,6 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
     window.addEventListener("pointercancel", handleWindowPointerUp as any);
   };
 
-  // Cleanup listeners on unmount
   useEffect(() => {
     return () => {
       window.removeEventListener("pointermove", handleWindowPointerMove as any);
@@ -520,9 +521,8 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
   const activeOption = options[activeIndex];
   const ActiveIcon = activeOption.icon;
 
-  // PROBLEM 3: Mini gears evenly spaced at 0°, 120°, 240° with same distance
   const miniGearAngles = [0, 120, 240];
-  const miniGearRadius = isMobile ? 140 : 180;
+  const miniGearRadius = isMobile ? 130 : 165;
 
   return (
     <AnimatePresence>
@@ -574,12 +574,13 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
               className="gear-dial relative my-1 sm:my-2 size-[260px] sm:size-[320px] md:size-[340px] max-w-[85vw] max-h-[60vh] aspect-square shrink-0 m-auto"
               style={{ perspective: "1200px", touchAction: "none" }}
             >
+              {/* FIX 2C: Stronger halo - blur 80px, opacity 0.6, pulse 0.5->0.7->0.5 */}
               <motion.div
                 key={`halo-${activeOption.id}`}
-                initial={{ opacity: 0.4 }}
+                initial={{ opacity: 0.5 }}
                 animate={{
-                  opacity: dragging ? 0.72 : [0.4, 0.6, 0.4],
-                  scale: dragging ? 1.08 : [1, 1.05, 1],
+                  opacity: dragging ? 0.8 : [0.5, 0.7, 0.5],
+                  scale: dragging ? 1.1 : [1, 1.06, 1],
                 }}
                 transition={{
                   opacity: dragging ? { duration: 0.2 } : { duration: 2, repeat: Infinity, ease: "easeInOut" },
@@ -590,18 +591,29 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                   width: "120%",
                   height: "120%",
                   background: `radial-gradient(circle at center, ${activeOption.haloColor}, transparent 70%)`,
-                  filter: isMobile ? "blur(20px)" : "blur(60px)",
+                  filter: isMobile ? "blur(30px)" : "blur(80px)",
                   transform: "translate(-50%, -50%) translateZ(-40px)",
                   transition: "background 300ms ease",
                   willChange: "transform, opacity",
                 }}
               />
 
+              {/* FIX 2E: Radial glow tinted with selected option color */}
               <div
-                className="pointer-events-none absolute left-1/2 top-1/2 size-[115%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                className="pointer-events-none absolute left-1/2 top-1/2 size-[125%] -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{
-                  background: "radial-gradient(circle at center, rgba(245, 158, 11, 0.2), transparent 70%)",
+                  background: `radial-gradient(circle at center, ${activeOption.radialGlow}, transparent 70%)`,
                   transform: "translate(-50%, -50%) translateZ(-20px)",
+                  transition: "background 300ms ease",
+                }}
+              />
+
+              {/* Subtle amber base glow */}
+              <div
+                className="pointer-events-none absolute left-1/2 top-1/2 size-[110%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60"
+                style={{
+                  background: "radial-gradient(circle at center, rgba(245, 158, 11, 0.12), transparent 70%)",
+                  transform: "translate(-50%, -50%) translateZ(-25px)",
                 }}
               />
 
@@ -624,9 +636,9 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                 />
               </div>
 
-              {/* PROBLEM 3: Mini gears evenly spaced using rotate(angle) translate(radius) rotate(-angle) */}
+              {/* FIX 3: Mini gears subtle - 40px, opacity 0.7 */}
               {miniGearAngles.map((angleDeg, idx) => {
-                const gearSize = isMobile ? 40 : 60;
+                const gearSize = isMobile ? 32 : 40;
                 return (
                   <div
                     key={`mini-gear-${angleDeg}`}
@@ -636,7 +648,7 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                       left: "50%",
                       width: gearSize,
                       height: gearSize,
-                      // Perfectly symmetric: same distance from center, teeth meshing just outside main gear
+                      opacity: 0.7,
                       transform: `translate(-50%, -50%) rotate(${angleDeg}deg) translate(${miniGearRadius}px) rotate(-${angleDeg}deg)`,
                       willChange: "transform",
                     }}
@@ -695,6 +707,7 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                     style={{ rotate: rotation, transformStyle: "preserve-3d", willChange: "transform" }}
                     className="relative size-full select-none"
                   >
+                    {/* FIX 2A: Gear body navy #0F1B2D with amber teeth #F59E0B */}
                     <svg viewBox="0 0 340 340" className="size-full drop-shadow-[0_16px_36px_rgba(0,0,0,0.65)]">
                       <defs>
                         <radialGradient id={`gear-face-grad-${id}`} cx="50%" cy="50%" r="50%">
@@ -704,8 +717,11 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                           <stop offset="100%" stopColor="#0F1B2D" />
                         </radialGradient>
                       </defs>
+                      {/* Teeth amber */}
                       <path d={MAIN_GEAR_PATH} fill="#F59E0B" stroke="#B45309" strokeWidth="1.2" />
+                      {/* Body navy */}
                       <circle cx="170" cy="170" r="142" fill="#0F1B2D" />
+                      {/* Inner ring deeper navy #0A1628 */}
                       <circle cx="170" cy="170" r="115" fill="none" stroke="#0A1628" strokeWidth="14" strokeOpacity="0.9" />
                       <circle cx="170" cy="170" r="115" fill="none" stroke="#1A365D" strokeWidth="1" strokeOpacity="0.5" />
                       {Array.from({ length: 36 }).map((_, i) => {
@@ -729,34 +745,84 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                           />
                         );
                       })}
-                      <circle cx="170" cy="170" r="70" fill="none" stroke="#F59E0B" strokeWidth="1" strokeDasharray="4 4" strokeOpacity="0.25" />
-                      <circle cx="170" cy="170" r="48" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" />
-                      <circle cx="170" cy="170" r="38" fill="#1A365D" stroke="#0F1B2D" strokeWidth="1.5" />
-                      <circle cx="170" cy="170" r="36" fill={`url(#gear-face-grad-${id})`} />
-                      {Array.from({ length: 6 }).map((_, i) => {
-                        const a = (i * 60 * Math.PI) / 180;
-                        return <circle key={i} cx={170 + 41 * Math.cos(a)} cy={170 + 41 * Math.sin(a)} r="2.5" fill="#FCD34D" stroke="#78350F" strokeWidth="0.8" />;
-                      })}
+
+                      {/* FIX 2D: Dashed circle colored and animated - base static track */}
+                      <circle cx="170" cy="170" r="70" fill="none" stroke="#1A365D" strokeWidth="0.5" strokeOpacity="0.2" />
                     </svg>
 
-                    {/* PROBLEM 1: Center hub perfectly centered 50%/50% */}
+                    {/* FIX 2D: Dashed circle colored with selected option, rotating slowly 20s */}
+                    <motion.div
+                      className="pointer-events-none absolute rounded-full"
+                      style={{
+                        top: "50%",
+                        left: "50%",
+                        width: "41.5%",
+                        height: "41.5%",
+                        border: `1.5px dashed ${activeOption.badgeBg}`,
+                        opacity: 0.5,
+                        x: "-50%",
+                        y: "-50%",
+                      }}
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    />
+
+                    {/* FIX 2F: Breathing light from center - empty center with soft light toward selected option */}
                     <div
                       className="pointer-events-none absolute"
                       style={{
-                        position: "absolute",
                         top: "50%",
                         left: "50%",
-                        transform: "translate(-50%, -50%) translateZ(14px)",
-                        willChange: "transform",
+                        transform: "translate(-50%, -50%)",
                       }}
                     >
-                      <div
-                        className="grid size-12 place-items-center rounded-full border border-amber-500/40 bg-gradient-to-br from-[#F59E0B] to-[#B45309] shadow-inner"
-                        style={{ boxShadow: "0 0 22px rgba(245, 158, 11, 0.55)" }}
-                      >
-                        <RotateCw className="size-4 animate-spin text-[#0A1628] [animation-duration:12s]" />
-                      </div>
+                      {/* Central soft glow */}
+                      <motion.div
+                        className="rounded-full"
+                        style={{
+                          width: "48px",
+                          height: "48px",
+                          background: `radial-gradient(circle at center, ${activeOption.badgeBg}30, transparent 70%)`,
+                          filter: "blur(8px)",
+                        }}
+                        animate={{ scale: [1, 1.3, 1], opacity: [0.4, 0.7, 0.4] }}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      {/* Small glowing dot at center pulsing */}
+                      <motion.div
+                        className="absolute rounded-full"
+                        style={{
+                          top: "50%",
+                          left: "50%",
+                          width: "8px",
+                          height: "8px",
+                          background: activeOption.badgeBg,
+                          boxShadow: `0 0 12px ${activeOption.badgeBg}`,
+                          x: "-50%",
+                          y: "-50%",
+                        }}
+                        animate={{ scale: [1, 1.4, 1], opacity: [0.6, 1, 0.6] }}
+                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                      {/* Beam toward selected option (top) */}
+                      <motion.div
+                        className="absolute"
+                        style={{
+                          top: "50%",
+                          left: "50%",
+                          width: "2px",
+                          height: "70px",
+                          background: `linear-gradient(to top, ${activeOption.badgeBg}60, transparent)`,
+                          transformOrigin: "bottom center",
+                          x: "-50%",
+                          y: "-100%",
+                        }}
+                        animate={{ opacity: [0.2, 0.5, 0.2], scaleY: [0.8, 1, 0.8] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      />
                     </div>
+
+                    {/* FIX 1: Center hub REMOVED - empty navy space */}
 
                     {options.map((opt, idx) => {
                       const rad = ((opt.baseAngle - 90) * Math.PI) / 180;
@@ -786,7 +852,6 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                             className="flex flex-col items-center justify-center"
                             style={{ rotate: counterRotation }}
                           >
-                            {/* BONUS: Breathing light effect */}
                             <div className="relative">
                               {isActive && (
                                 <motion.div
