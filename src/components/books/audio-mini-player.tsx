@@ -1,85 +1,98 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  FastForward,
-  Minus,
-  Pause,
   Play,
-  Rewind,
+  Pause,
   Square,
+  RotateCcw,
+  RotateCw,
   Volume2,
   VolumeX,
   X,
+  Minus,
 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
-
 export interface AudioTrack {
+  id?: string;
   title: string;
-  audioUrl: string;
   bookTitle?: string;
+  audioUrl: string;
   unitNumber?: string | number;
   sectionId?: string;
 }
+
+export type CassetteTrack = AudioTrack;
 
 interface AudioMiniPlayerProps {
   track: AudioTrack | null;
   onClose: () => void;
 }
 
-function formatTime(seconds: number): string {
-  if (isNaN(seconds) || seconds < 0) return "00:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins < 10 ? "0" : ""}${mins}:${secs < 10 ? "0" : ""}${secs}`;
-}
-
-// Subtle mechanical latch click sound via Web Audio API
-function playMechanicalClick() {
+// Generate an authentic mechanical click sound with Web Audio API
+function playMechanicalClick(frequency = 180, duration = 0.035) {
   try {
-    const AudioContextClass =
+    const AudioCtx =
       window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = "sine";
-    osc.frequency.setValueAtTime(680, ctx.currentTime);
-    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.035);
+    osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + duration);
 
-    gain.gain.setValueAtTime(0.08, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.035);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start();
-    osc.stop(ctx.currentTime + 0.04);
+    osc.stop(ctx.currentTime + duration);
+    setTimeout(() => {
+      ctx.close().catch(() => {});
+    }, duration * 1000 + 100);
   } catch {
-    // Ignore if blocked by browser autoplay policy
+    // Ignore audio context failures
   }
+}
+
+function formatTime(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return "00:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
 export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const progressLineRef = useRef<HTMLDivElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [playbackRate, setPlaybackRate] = useState(1);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
   const [volumeSliderOpen, setVolumeSliderOpen] = useState(false);
-  const [isSpoolingFast, setIsSpoolingFast] = useState<"forward" | "rewind" | null>(null);
+  const [isDraggingKnob, setIsDraggingKnob] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState(false);
 
-  const prefersReduced = useReducedMotion();
+  // Check reduced motion preference
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReduced(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReduced(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
-  // Load volume preference from localStorage
+  // Restore saved volume
   useEffect(() => {
     try {
       const savedVol = localStorage.getItem("basirshelf:cassette:volume");
@@ -87,7 +100,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
         const v = parseFloat(savedVol);
         if (!isNaN(v) && v >= 0 && v <= 1) {
           setVolume(v);
-          if (audioRef.current) audioRef.current.volume = v;
+          setIsMuted(v === 0);
         }
       }
     } catch {
@@ -95,98 +108,41 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     }
   }, []);
 
-  // Autoplay & reset when track changes
+  // Sync track change
   useEffect(() => {
     if (!track) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
       setIsPlaying(false);
+      setCurrentTime(0);
       return;
     }
+    setCurrentTime(0);
+    setIsMinimized(false);
 
     const audio = audioRef.current;
     if (audio) {
       audio.src = track.audioUrl;
       audio.playbackRate = playbackRate;
-      audio.currentTime = 0;
-      setCurrentTime(0);
-      setIsMinimized(false);
+      audio.volume = isMuted ? 0 : volume;
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise
-          .then(() => {
-            setIsPlaying(true);
-            window.dispatchEvent(new CustomEvent("basirshelf:pause-video"));
-          })
-          .catch(() => {
-            setIsPlaying(false);
-          });
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
       }
     }
-  }, [track]);
+  }, [track, playbackRate, isMuted, volume]);
 
-  // Pause audio if external video plays
-  useEffect(() => {
-    const handlePauseAudio = () => {
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      }
-    };
-
-    window.addEventListener("basirshelf:pause-audio", handlePauseAudio);
-    return () => {
-      window.removeEventListener("basirshelf:pause-audio", handlePauseAudio);
-    };
-  }, []);
-
-  // Keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
-      ) {
-        return;
-      }
-
-      if (!track) return;
-
-      if (e.code === "Space") {
-        e.preventDefault();
-        togglePlay();
-      } else if (e.code === "ArrowLeft") {
-        e.preventDefault();
-        seekDelta(-5);
-      } else if (e.code === "ArrowRight") {
-        e.preventDefault();
-        seekDelta(5);
-      } else if (e.code === "Escape") {
-        e.preventDefault();
-        if (speedMenuOpen) setSpeedMenuOpen(false);
-        else if (volumeSliderOpen) setVolumeSliderOpen(false);
-        else onClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [track, isPlaying, volume, speedMenuOpen, volumeSliderOpen]);
-
-  // Audio event listeners
+  // Audio element listeners
   const handleTimeUpdate = () => {
-    if (audioRef.current) {
+    if (audioRef.current && !isDraggingKnob) {
       setCurrentTime(audioRef.current.currentTime);
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      setDuration(audioRef.current.duration || 0);
     }
   };
 
@@ -195,6 +151,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     setCurrentTime(0);
   };
 
+  // Play / Pause toggle
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -212,6 +169,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     }
   }, [isPlaying]);
 
+  // Stop playback (resets to 0:00)
   const stopPlayback = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -222,16 +180,12 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     setIsPlaying(false);
   }, []);
 
+  // Seek +/- 10s
   const seekDelta = useCallback(
     (deltaSeconds: number) => {
       const audio = audioRef.current;
       if (!audio) return;
       playMechanicalClick();
-
-      const isRewinding = deltaSeconds < 0;
-      setIsSpoolingFast(isRewinding ? "rewind" : "forward");
-      setTimeout(() => setIsSpoolingFast(null), 400);
-
       const target = Math.max(0, Math.min(duration || 100, audio.currentTime + deltaSeconds));
       audio.currentTime = target;
       setCurrentTime(target);
@@ -239,15 +193,20 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     [duration],
   );
 
-  const handleSeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const target = Number(e.target.value);
-    setCurrentTime(target);
+  // Speed cycle: 0.75x -> 1x -> 1.25x -> 1.5x -> 2x -> 0.75x
+  const cycleSpeed = useCallback(() => {
+    playMechanicalClick();
+    const speeds = [0.75, 1, 1.25, 1.5, 2];
+    const currentIndex = speeds.indexOf(playbackRate);
+    const nextSpeed = speeds[(currentIndex + 1) % speeds.length];
+    setPlaybackRate(nextSpeed);
     if (audioRef.current) {
-      audioRef.current.currentTime = target;
+      audioRef.current.playbackRate = nextSpeed;
     }
-  };
+  }, [playbackRate]);
 
-  const changeVolume = (newVol: number) => {
+  // Volume slider handler
+  const handleVolumeChange = (newVol: number) => {
     setVolume(newVol);
     setIsMuted(newVol === 0);
     if (audioRef.current) {
@@ -263,54 +222,126 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
 
   const toggleMute = () => {
     playMechanicalClick();
-    if (!audioRef.current) return;
-    const next = !isMuted;
-    setIsMuted(next);
-    audioRef.current.muted = next;
-  };
-
-  const changeSpeed = (rate: number) => {
-    playMechanicalClick();
-    setPlaybackRate(rate);
-    if (audioRef.current) {
-      audioRef.current.playbackRate = rate;
+    if (isMuted) {
+      setIsMuted(false);
+      if (audioRef.current) audioRef.current.muted = false;
+    } else {
+      setIsMuted(true);
+      if (audioRef.current) audioRef.current.muted = true;
     }
-    setSpeedMenuOpen(false);
   };
 
-  // Tape calculation (shrink left reel from r=31 to r=17, grow right reel from r=17 to r=31)
-  const progressRatio = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
-  const leftTapeRadius = 31 - progressRatio * 14;
-  const rightTapeRadius = 17 + progressRatio * 14;
+  // Keyboard controls (Space = Play/Pause, Left = -10s, Right = +10s, Esc = Close)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!track) return;
+      if (["input", "textarea"].includes((e.target as HTMLElement)?.tagName?.toLowerCase())) return;
 
-  // Rotation duration in seconds (faster with higher rate, 3x faster when seeking)
-  const rotationDuration = isSpoolingFast
-    ? "0.7s"
-    : `${Math.max(0.8, 3 / playbackRate)}s`;
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        seekDelta(-10);
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        seekDelta(10);
+      } else if (e.code === "Escape") {
+        e.preventDefault();
+        if (volumeSliderOpen) setVolumeSliderOpen(false);
+        else onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [track, togglePlay, seekDelta, volumeSliderOpen, onClose]);
+
+  // Draggable Magnetic Tape Progress Knob
+  const updateProgressFromPointer = useCallback(
+    (clientX: number) => {
+      if (!progressLineRef.current || !duration) return;
+      const rect = progressLineRef.current.getBoundingClientRect();
+      const clickX = Math.max(0, Math.min(clientX - rect.left, rect.width));
+      const ratio = clickX / rect.width;
+      const targetTime = ratio * duration;
+      setCurrentTime(targetTime);
+      if (audioRef.current) {
+        audioRef.current.currentTime = targetTime;
+      }
+    },
+    [duration],
+  );
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingKnob(true);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    updateProgressFromPointer(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingKnob) return;
+    e.preventDefault();
+    updateProgressFromPointer(e.clientX);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDraggingKnob) return;
+    setIsDraggingKnob(false);
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
 
   if (!track) return null;
 
+  // Normalized progress: 0 to 1
+  const progressRatio = duration > 0 ? Math.min(1, Math.max(0, currentTime / duration)) : 0;
+  const progressPercent = progressRatio * 100;
+
+  // Reel tape thickness:
+  // Left starts at 16px and shrinks to 4px: 16 - 12 * progressRatio
+  // Right starts at 4px and grows to 16px: 4 + 12 * progressRatio
+  const leftTapeThickness = 16 - 12 * progressRatio;
+  const rightTapeThickness = 4 + 12 * progressRatio;
+
+  // Reel spin duration (3s at 1x speed, scaled by playback rate)
+  const spinDuration = 3 / Math.max(0.25, playbackRate);
+
   return (
     <>
-      {/* Hidden audio element */}
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-        onPlay={() => {
-          setIsPlaying(true);
-          window.dispatchEvent(new CustomEvent("basirshelf:pause-video"));
-        }}
+        onLoadedData={(e) => setDuration(e.currentTarget.duration || 0)}
+        onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
+        onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onEnded={handleEnded}
+        preload="auto"
       />
 
-      {/* Minimized Floating Cassette Badge */}
+      {/* Embedded CSS for authentic continuous spin and play pulse */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes cassette-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes cassette-play-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(90, 103, 216, 0.45), inset 0 -2px 0 rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 0 6px rgba(90, 103, 216, 0.1), inset 0 -2px 0 rgba(0,0,0,0.25); }
+          }
+        `,
+        }}
+      />
+
+      {/* Floating Minimized Badge */}
       <AnimatePresence>
         {isMinimized ? (
           <motion.button
             key="minimized-cassette"
-            type="button"
             onClick={() => {
               playMechanicalClick();
               setIsMinimized(false);
@@ -318,22 +349,22 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             initial={{ scale: 0, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0, opacity: 0, y: 20 }}
-            whileHover={{ scale: 1.06 }}
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="Expand cassette audio player"
-            className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[#1A365D]/25 bg-[#F5EFE6] px-3.5 py-2 shadow-[0_12px_28px_rgba(26,54,93,0.3)] backdrop-blur transition-all"
+            className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[#1A365D]/30 bg-[#F5EFE6] px-3.5 py-2 shadow-[0_12px_28px_rgba(26,54,93,0.3)] backdrop-blur transition-all"
           >
-            {/* Mini spinning reel */}
             <div
-              className={cn(
-                "relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-white",
-                isPlaying && !prefersReduced && "animate-spin",
-              )}
-              style={{ animationDuration: "2s" }}
+              className="relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-white"
+              style={{
+                animation:
+                  isPlaying && !prefersReduced
+                    ? `cassette-spin ${spinDuration}s linear infinite`
+                    : "none",
+              }}
             >
               <div className="size-1.5 rounded-full bg-[#F5EFE6]" />
             </div>
-
             <div className="text-start">
               <p className="font-serif text-[11px] font-bold text-[#1A365D] line-clamp-1">
                 {track.title}
@@ -346,414 +377,533 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
         ) : null}
       </AnimatePresence>
 
-      {/* Full Retro Cassette Tape Body (Aspect ratio 1.6 / 1) */}
+      {/* STEP 4: ANIMATIONS - Entry slide up from bottom with spring (stiffness 260, damping 20), 400ms */}
       <AnimatePresence>
         {!isMinimized ? (
           <motion.div
             key="retro-cassette-modal"
             role="region"
             aria-label="Retro cassette audio player"
-            initial={
-              prefersReduced
-                ? { opacity: 0, y: 30 }
-                : { y: 120, opacity: 0, rotate: -2, scale: 0.94 }
-            }
-            animate={
-              prefersReduced
-                ? { opacity: 1, y: 0 }
-                : { y: 0, opacity: 1, rotate: 0, scale: 1 }
-            }
-            exit={
-              prefersReduced
-                ? { opacity: 0, y: 30 }
-                : { y: 120, opacity: 0, rotate: 1, scale: 0.94 }
-            }
-            transition={{ type: "spring", stiffness: 260, damping: 22 }}
-            className="fixed bottom-3 sm:bottom-5 left-1/2 -translate-x-1/2 z-50 w-[min(420px,calc(100vw-1.5rem))] select-none touch-none"
+            initial={{ y: 120, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 120, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.4 }}
+            className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90vw] sm:w-[420px] select-none touch-none"
           >
-            {/* Step 1: The Cassette Body (aspect-ratio 1.6 / 1, cream #F5EFE6, rounded 16px, soft shadow) */}
+            {/* STEP 2-A: THE CASSETTE BODY CONTAINER */}
+            {/* Aspect ratio 1.6 / 1, background #F5EFE6 subtle gradient, border 1px solid rgba(26,54,93,0.2), rounded 12px, soft shadow */}
             <div
-              className="relative flex flex-col justify-between overflow-hidden rounded-[16px] border border-[#1A365D]/20 p-2.5 sm:p-3 shadow-[0_20px_40px_rgba(26,54,93,0.22),0_4px_12px_rgba(0,0,0,0.08)]"
+              className="relative overflow-hidden rounded-[12px] border border-[#1A365D]/20 p-2 sm:p-2.5 shadow-[0_20px_40px_rgba(26,54,93,0.2),0_4px_12px_rgba(0,0,0,0.08)]"
               style={{
-                backgroundColor: "#F5EFE6",
                 aspectRatio: "1.6 / 1",
+                background: "linear-gradient(180deg, #FBF7F0 0%, #EFE8DC 100%)",
               }}
             >
-              {/* Step 2: The Label (Top section ~25% height) */}
+              {/* STEP 2-F: FOUR CORNER SCREWS (6px circles, gray with tiny dark dot) */}
+              <div className="absolute top-1.5 left-1.5 size-[6px] rounded-full bg-[#9CA3AF] shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none z-20">
+                <div className="size-[2px] rounded-full bg-[#374151]" />
+              </div>
+              <div className="absolute top-1.5 right-1.5 size-[6px] rounded-full bg-[#9CA3AF] shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none z-20">
+                <div className="size-[2px] rounded-full bg-[#374151]" />
+              </div>
+              <div className="absolute bottom-1.5 left-1.5 size-[6px] rounded-full bg-[#9CA3AF] shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none z-20">
+                <div className="size-[2px] rounded-full bg-[#374151]" />
+              </div>
+              <div className="absolute bottom-1.5 right-1.5 size-[6px] rounded-full bg-[#9CA3AF] shadow-[inset_0_1px_1px_rgba(0,0,0,0.5)] flex items-center justify-center pointer-events-none z-20">
+                <div className="size-[2px] rounded-full bg-[#374151]" />
+              </div>
+
+              {/* STEP 2-F: SIDE EDGE NOTCHES (tiny rectangles cut into the border) */}
+              <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#DED6C7] rounded-r-sm border-y border-r border-[#1A365D]/30 shadow-[inset_1px_0_1px_rgba(0,0,0,0.15)] pointer-events-none z-20" />
+              <div className="absolute -right-[1px] top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[#DED6C7] rounded-l-sm border-y border-l border-[#1A365D]/30 shadow-[inset_-1px_0_1px_rgba(0,0,0,0.15)] pointer-events-none z-20" />
+
+              {/* STEP 2-A: CSS GRID WITH 3 ROWS: label (22%), window (50%), controls (28%) */}
               <div
-                className="relative flex h-[25%] flex-col justify-between overflow-hidden rounded-lg px-2.5 py-1.5 shadow-sm"
-                style={{ backgroundColor: "#1A365D", color: "#FDFBF7" }}
+                className="grid h-full w-full"
+                style={{
+                  gridTemplateRows: "22% 50% 28%",
+                }}
               >
-                {/* Header Row: Title on Left, Time & Window Controls on Right */}
-                <div className="flex items-start justify-between gap-2">
-                  {/* Left Side: "Interchange 1 — Unit X" in serif font, and Institute below */}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-serif text-xs sm:text-sm font-bold tracking-tight text-[#FDFBF7] truncate">
-                      {track.bookTitle ? `${track.bookTitle} — ` : ""}
+                {/* ======================================================== */}
+                {/* STEP 2-B: THE LABEL (TOP 22%)                            */}
+                {/* Background navy #1A365D, rounded top corners only        */}
+                {/* Left: Book title serif 18px, Unit sans-serif 13px cream,  */}
+                {/*       Basir Language Institute 10px gray                 */}
+                {/* Right: SIDE A tag top right, Monospace 00:04 / 04:46 12px */}
+                {/* Do NOT cut off text with ellipsis                         */}
+                {/* ======================================================== */}
+                <div
+                  className="relative flex h-full w-full items-stretch justify-between overflow-hidden rounded-t-[8px] px-3 py-1 shadow-sm"
+                  style={{ backgroundColor: "#1A365D" }}
+                >
+                  {/* Left Side text stack */}
+                  <div className="flex flex-col justify-center min-w-0 pr-2">
+                    <h3 className="font-serif text-[15px] sm:text-[18px] font-bold leading-tight text-[#FDFBF7] tracking-tight">
+                      {track.bookTitle || "Interchange 1"}
+                    </h3>
+                    <p className="font-sans text-[11px] sm:text-[13px] font-medium leading-tight text-[#F5EFE6]">
                       {track.title}
                     </p>
-                    <p className="text-[9px] sm:text-[10px] text-slate-300 font-medium">
+                    <p className="font-sans text-[9px] sm:text-[10px] text-slate-300 font-normal leading-none mt-0.5">
                       Basir Language Institute
                     </p>
                   </div>
 
-                  {/* Right Side: Monospace Time "00:00 / 00:12" and Controls */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="font-mono text-[10px] sm:text-[11px] font-bold text-amber-300">
+                  {/* Right Side: SIDE A tag + controls + Monospace time */}
+                  <div className="flex flex-col items-end justify-between shrink-0 h-full py-0.5 pl-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="rounded border border-white/30 bg-white/10 px-1.5 py-0.5 font-sans text-[8px] sm:text-[9px] font-bold tracking-wider text-[#FDFBF7] uppercase leading-none">
+                        SIDE A
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playMechanicalClick();
+                          setIsMinimized(true);
+                        }}
+                        aria-label="Minimize cassette player"
+                        className="grid size-4 place-items-center rounded text-white/70 hover:bg-white/20 hover:text-white transition-colors"
+                      >
+                        <Minus className="size-2.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playMechanicalClick();
+                          onClose();
+                        }}
+                        aria-label="Close audio player"
+                        className="grid size-4 place-items-center rounded text-white/70 hover:bg-red-500/30 hover:text-red-300 transition-colors"
+                      >
+                        <X className="size-2.5" />
+                      </button>
+                    </div>
+
+                    <span className="font-mono text-[10px] sm:text-[12px] font-semibold text-[#FDFBF7] tracking-tight">
                       {formatTime(currentTime)} / {formatTime(duration)}
                     </span>
-
-                    {/* Minimize button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playMechanicalClick();
-                        setIsMinimized(true);
-                      }}
-                      aria-label="Minimize cassette player"
-                      className="grid size-5 place-items-center rounded text-white/70 hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                      <Minus className="size-3" />
-                    </button>
-
-                    {/* Close button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        playMechanicalClick();
-                        onClose();
-                      }}
-                      aria-label="Close audio player"
-                      className="grid size-5 place-items-center rounded text-white/70 hover:bg-red-500/20 hover:text-red-400 transition-colors"
-                    >
-                      <X className="size-3" />
-                    </button>
                   </div>
                 </div>
 
-                {/* Subtle horizontal line separating the label from the reels */}
-                <div className="h-[1px] w-full bg-white/15" />
-              </div>
-
-              {/* Step 3: The Reel Window (Middle section ~50% height) */}
-              <div className="relative flex h-[48%] items-center justify-center overflow-hidden rounded-lg border border-black/40 bg-[#0B1120] px-3 shadow-[inset_0_3px_8px_rgba(0,0,0,0.8)]">
-                {/* Horizontal tape ribbon across background */}
+                {/* ======================================================== */}
+                {/* STEP 2-C: THE WINDOW (MIDDLE 50%)                         */}
+                {/* Background very dark navy #0A1628, inner shadow, rounded 8px*/}
+                {/* Two Reels side by side, centered horizontally            */}
+                {/* Outer circle: 64px diameter, light gray/white #E8E8E8    */}
+                {/* Six SPOKES inside (thin lines center to edge)            */}
+                {/* CENTER HOLE (8px diameter, dark)                         */}
+                {/* TAPE RING around reel: dark brown/black #2A1F14           */}
+                {/* Left shrinks (16->4px), right grows (4->16px)            */}
+                {/* Reels rotate continuously @keyframes spin 3s duration    */}
+                {/* ======================================================== */}
                 <div
-                  className="pointer-events-none absolute inset-x-8 top-1/2 -translate-y-1/2 h-3.5 bg-gradient-to-r from-[#2A170A] via-[#1E1007] to-[#2A170A] opacity-75"
-                  aria-hidden="true"
-                />
-
-                {/* Central tape guide ruler marks: 100 50 0 */}
-                <div
-                  className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center opacity-85"
-                  aria-hidden="true"
+                  className="relative my-1 flex items-center justify-around overflow-hidden rounded-[8px] px-3 shadow-[inset_0_4px_12px_rgba(0,0,0,0.85)]"
+                  style={{ backgroundColor: "#0A1628" }}
                 >
-                  <div className="flex items-center gap-1.5 font-mono text-[7px] font-bold tracking-widest text-slate-400">
-                    <span>100</span>
-                    <span className="h-1 w-0.5 bg-slate-500" />
-                    <span>50</span>
-                    <span className="h-1 w-0.5 bg-slate-500" />
-                    <span>0</span>
+                  {/* Horizontal connecting tape ribbon */}
+                  <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 bg-[#2A1F14] opacity-85 pointer-events-none" />
+
+                  {/* Center Tape Gauge: 100 | 50 | 0 */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center pointer-events-none">
+                    <div className="flex items-center gap-2 font-mono text-[8px] text-amber-200/60 font-bold tracking-widest">
+                      <span>100</span>
+                      <span>50</span>
+                      <span>0</span>
+                    </div>
+                    <div className="mt-0.5 flex w-12 items-center justify-between px-1">
+                      <div className="h-2 w-[1px] bg-amber-200/50" />
+                      <div className="h-1.5 w-[1px] bg-amber-200/35" />
+                      <div className="h-2 w-[1px] bg-amber-200/50" />
+                      <div className="h-1.5 w-[1px] bg-amber-200/35" />
+                      <div className="h-2 w-[1px] bg-amber-200/50" />
+                    </div>
                   </div>
-                  <div className="mt-0.5 h-1 w-12 rounded bg-black/60 border border-white/10 overflow-hidden">
+
+                  {/* LEFT REEL: 64px diameter SVG circle, 6 spokes, 8px center hole, dark tape ring */}
+                  <div className="relative z-0 flex items-center justify-center">
+                    <svg
+                      viewBox="-55 -55 110 110"
+                      className="size-16 sm:size-20 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      {/* Tape Ring around left reel (thick ring dark brown/black #2A1F14, starts 16px, shrinks to 4px) */}
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + leftTapeThickness}
+                        fill="#2A1F14"
+                        stroke="#1F160E"
+                        strokeWidth="1"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + leftTapeThickness * 0.75}
+                        fill="none"
+                        stroke="#3D2E20"
+                        strokeWidth="0.75"
+                        opacity="0.5"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + leftTapeThickness * 0.4}
+                        fill="none"
+                        stroke="#1F160E"
+                        strokeWidth="0.75"
+                        opacity="0.5"
+                      />
+
+                      {/* Rotating Reel Hub: 64px diameter (r = 32px), 6 spokes, 8px hole */}
+                      <g
+                        style={{
+                          transformOrigin: "0px 0px",
+                          animation:
+                            isPlaying && !prefersReduced
+                              ? `cassette-spin ${spinDuration}s linear infinite`
+                              : "none",
+                        }}
+                      >
+                        {/* Outer circle (the reel body): 64px diameter, light gray/white #E8E8E8 */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="32"
+                          fill="#E8E8E8"
+                          stroke="#D1D5DB"
+                          strokeWidth="1.5"
+                        />
+
+                        {/* Hub recess */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="25"
+                          fill="#F3F4F6"
+                          stroke="#E5E7EB"
+                          strokeWidth="1"
+                        />
+
+                        {/* Six SPOKES inside (thin lines from center to edge, 60 degrees apart) */}
+                        {[0, 60, 120, 180, 240, 300].map((deg) => {
+                          const rad = (deg * Math.PI) / 180;
+                          return (
+                            <line
+                              key={deg}
+                              x1={Math.cos(rad) * 4}
+                              y1={Math.sin(rad) * 4}
+                              x2={Math.cos(rad) * 31}
+                              y2={Math.sin(rad) * 31}
+                              stroke="#9CA3AF"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          );
+                        })}
+
+                        {/* Center Hole: 8px diameter (radius 4px), dark #0A1628 */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="4"
+                          fill="#0A1628"
+                          stroke="#374151"
+                          strokeWidth="1"
+                        />
+
+                        {/* Spindle drive teeth */}
+                        {[0, 120, 240].map((deg) => {
+                          const rad = (deg * Math.PI) / 180;
+                          return (
+                            <circle
+                              key={deg}
+                              cx={Math.cos(rad) * 5.5}
+                              cy={Math.sin(rad) * 5.5}
+                              r="1.2"
+                              fill="#E8E8E8"
+                            />
+                          );
+                        })}
+                      </g>
+                    </svg>
+                  </div>
+
+                  {/* RIGHT REEL: 64px diameter SVG circle, 6 spokes, 8px center hole, dark tape ring */}
+                  <div className="relative z-0 flex items-center justify-center">
+                    <svg
+                      viewBox="-55 -55 110 110"
+                      className="size-16 sm:size-20 overflow-visible"
+                      aria-hidden="true"
+                    >
+                      {/* Tape Ring around right reel (thick ring dark brown/black #2A1F14, starts 4px, grows to 16px) */}
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + rightTapeThickness}
+                        fill="#2A1F14"
+                        stroke="#1F160E"
+                        strokeWidth="1"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + rightTapeThickness * 0.75}
+                        fill="none"
+                        stroke="#3D2E20"
+                        strokeWidth="0.75"
+                        opacity="0.5"
+                      />
+                      <circle
+                        cx="0"
+                        cy="0"
+                        r={32 + rightTapeThickness * 0.4}
+                        fill="none"
+                        stroke="#1F160E"
+                        strokeWidth="0.75"
+                        opacity="0.5"
+                      />
+
+                      {/* Rotating Reel Hub: 64px diameter (r = 32px), 6 spokes, 8px hole */}
+                      <g
+                        style={{
+                          transformOrigin: "0px 0px",
+                          animation:
+                            isPlaying && !prefersReduced
+                              ? `cassette-spin ${spinDuration}s linear infinite`
+                              : "none",
+                        }}
+                      >
+                        {/* Outer circle (the reel body): 64px diameter, light gray/white #E8E8E8 */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="32"
+                          fill="#E8E8E8"
+                          stroke="#D1D5DB"
+                          strokeWidth="1.5"
+                        />
+
+                        {/* Hub recess */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="25"
+                          fill="#F3F4F6"
+                          stroke="#E5E7EB"
+                          strokeWidth="1"
+                        />
+
+                        {/* Six SPOKES inside (thin lines from center to edge, 60 degrees apart) */}
+                        {[0, 60, 120, 180, 240, 300].map((deg) => {
+                          const rad = (deg * Math.PI) / 180;
+                          return (
+                            <line
+                              key={deg}
+                              x1={Math.cos(rad) * 4}
+                              y1={Math.sin(rad) * 4}
+                              x2={Math.cos(rad) * 31}
+                              y2={Math.sin(rad) * 31}
+                              stroke="#9CA3AF"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          );
+                        })}
+
+                        {/* Center Hole: 8px diameter (radius 4px), dark #0A1628 */}
+                        <circle
+                          cx="0"
+                          cy="0"
+                          r="4"
+                          fill="#0A1628"
+                          stroke="#374151"
+                          strokeWidth="1"
+                        />
+
+                        {/* Spindle drive teeth */}
+                        {[0, 120, 240].map((deg) => {
+                          const rad = (deg * Math.PI) / 180;
+                          return (
+                            <circle
+                              key={deg}
+                              cx={Math.cos(rad) * 5.5}
+                              cy={Math.sin(rad) * 5.5}
+                              r="1.2"
+                              fill="#E8E8E8"
+                            />
+                          );
+                        })}
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+
+                {/* ======================================================== */}
+                {/* STEP 2-D & 2-E: CONTROLS (BOTTOM 28%)                    */}
+                {/* Magnetic tape progress bar at top                        */}
+                {/* Row of 6 buttons built INTO cassette body                */}
+                {/* ======================================================== */}
+                <div className="relative flex flex-col justify-between py-0.5">
+                  {/* STEP 2-D: MAGNETIC TAPE PROGRESS BAR */}
+                  {/* THIN line, 4px height, full width minus 24px padding     */}
+                  {/* Background light gray #D1D5DB, filled indigo #5A67D8     */}
+                  {/* 10px circular draggable knob                             */}
+                  <div
+                    ref={progressLineRef}
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
+                    role="slider"
+                    aria-label="Seek magnetic tape"
+                    aria-valuemin={0}
+                    aria-valuemax={Math.round(duration || 100)}
+                    aria-valuenow={Math.round(currentTime)}
+                    className="relative mx-3 h-[4px] cursor-pointer rounded-full bg-[#D1D5DB] transition-all"
+                  >
+                    {/* Filled portion: indigo #5A67D8 */}
                     <div
-                      className="h-full bg-amber-400 transition-all"
-                      style={{ width: `${progressRatio * 100}%` }}
+                      className="h-full rounded-full bg-[#5A67D8]"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+
+                    {/* Small knob: 10px circle */}
+                    <div
+                      className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[10px] rounded-full bg-[#5A67D8] border border-white shadow-sm transition-transform hover:scale-125"
+                      style={{ left: `${progressPercent}%` }}
                     />
                   </div>
-                </div>
 
-                {/* TWO REELS INSIDE: Left Reel & Right Reel (Both rotate continuously during playback!) */}
-                <div className="flex w-full items-center justify-around">
-                  {/* LEFT REEL (Supply Reel) */}
-                  <div className="relative size-[64px] sm:size-[72px] shrink-0 grid place-items-center">
-                    <svg viewBox="0 0 80 80" className="size-full">
-                      {/* Dark Ring of Tape Around Reel (Starts thick, shrinks as audio plays) */}
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r={Math.max(16, leftTapeRadius)}
-                        fill="#2A170A"
-                        stroke="#190E06"
-                        strokeWidth="1"
-                        className="transition-all duration-200"
-                      />
+                  {/* STEP 2-E: ROW OF 6 BUTTONS BUILT INTO CASSETTE BODY */}
+                  {/* Rewind, Play/Pause, Stop, Forward, Speed, Volume          */}
+                  {/* Each button: 44x44px rounded rect, cream bg, navy icon    */}
+                  {/* Press effect: scale(0.95) + inset shadow                  */}
+                  {/* Play button LARGER (56x56px), indigo #5A67D8 bg + pulse   */}
+                  {/* Spaced evenly with 8px gap                                */}
+                  <div className="flex items-center justify-between gap-1.5 sm:gap-2 px-3 pt-0.5">
+                    {/* 1. Rewind (-10s) */}
+                    <button
+                      type="button"
+                      onClick={() => seekDelta(-10)}
+                      aria-label="Rewind 10 seconds"
+                      title="Rewind 10s (Left Arrow)"
+                      className="flex size-[34px] sm:size-[44px] items-center justify-center rounded-lg border border-[#1A365D]/20 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
+                    >
+                      <RotateCcw className="size-3.5 sm:size-4" />
+                    </button>
 
-                      {/* Rotating White Hub with 6 Spokes and Center Hole */}
-                      <g
-                        className={cn(isPlaying && !prefersReduced && "animate-spin")}
-                        style={{
-                          transformOrigin: "40px 40px",
-                          animationDuration: rotationDuration,
-                          animationPlayState: isPlaying ? "running" : "paused",
+                    {/* 2. Play / Pause (LARGER 56x56px, active indigo #5A67D8 with white icon, pulse) */}
+                    <button
+                      type="button"
+                      onClick={togglePlay}
+                      aria-label={isPlaying ? "Pause audio" : "Play audio"}
+                      title="Play / Pause (Space)"
+                      style={{
+                        animation:
+                          isPlaying && !prefersReduced ? "cassette-play-pulse 2s infinite" : "none",
+                      }}
+                      className={`flex size-[44px] sm:size-[56px] items-center justify-center rounded-xl border transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] ${
+                        isPlaying
+                          ? "border-[#5A67D8] bg-[#5A67D8] text-white"
+                          : "border-[#1A365D]/25 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_6px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)]"
+                      }`}
+                    >
+                      {isPlaying ? (
+                        <Pause className="size-5 sm:size-6 fill-current" />
+                      ) : (
+                        <Play className="size-5 sm:size-6 fill-current ml-0.5" />
+                      )}
+                    </button>
+
+                    {/* 3. Stop (Resets to 0:00) */}
+                    <button
+                      type="button"
+                      onClick={stopPlayback}
+                      aria-label="Stop audio"
+                      title="Stop (Reset to 0:00)"
+                      className="flex size-[34px] sm:size-[44px] items-center justify-center rounded-lg border border-[#1A365D]/20 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
+                    >
+                      <Square className="size-3.5 sm:size-4 fill-current" />
+                    </button>
+
+                    {/* 4. Forward (+10s) */}
+                    <button
+                      type="button"
+                      onClick={() => seekDelta(10)}
+                      aria-label="Fast forward 10 seconds"
+                      title="Forward 10s (Right Arrow)"
+                      className="flex size-[34px] sm:size-[44px] items-center justify-center rounded-lg border border-[#1A365D]/20 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
+                    >
+                      <RotateCw className="size-3.5 sm:size-4" />
+                    </button>
+
+                    {/* 5. Speed (1x) */}
+                    <button
+                      type="button"
+                      onClick={cycleSpeed}
+                      aria-label="Playback speed"
+                      title={`Speed: ${playbackRate}x (click to change)`}
+                      className="flex size-[34px] sm:size-[44px] items-center justify-center rounded-lg border border-[#1A365D]/20 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
+                    >
+                      <span className="font-mono text-[10px] sm:text-[11px] font-bold">
+                        {playbackRate}x
+                      </span>
+                    </button>
+
+                    {/* 6. Volume */}
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playMechanicalClick();
+                          setVolumeSliderOpen((v) => !v);
                         }}
+                        aria-label={isMuted ? "Unmute audio" : "Mute audio"}
+                        title="Volume control"
+                        className="flex size-[34px] sm:size-[44px] items-center justify-center rounded-lg border border-[#1A365D]/20 bg-[#F5EFE6] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
                       >
-                        {/* Circle Outline of Hub */}
-                        <circle
-                          cx="40"
-                          cy="40"
-                          r="16"
-                          fill="#FAF8F5"
-                          stroke="#94A3B8"
-                          strokeWidth="1.5"
-                        />
+                        {isMuted || volume === 0 ? (
+                          <VolumeX className="size-3.5 sm:size-4" />
+                        ) : (
+                          <Volume2 className="size-3.5 sm:size-4" />
+                        )}
+                      </button>
 
-                        {/* 6 Spokes from Center to Edge */}
-                        {Array.from({ length: 6 }).map((_, i) => {
-                          const rad = (i * 60 * Math.PI) / 180;
-                          const x2 = 40 + 13 * Math.cos(rad);
-                          const y2 = 40 + 13 * Math.sin(rad);
-                          return (
-                            <line
-                              key={i}
-                              x1="40"
-                              y1="40"
-                              x2={x2}
-                              y2={y2}
-                              stroke="#475569"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                            />
-                          );
-                        })}
-
-                        {/* Center Hole */}
-                        <circle cx="40" cy="40" r="5" fill="#0B1120" />
-                      </g>
-                    </svg>
-                  </div>
-
-                  {/* RIGHT REEL (Take-up Reel) */}
-                  <div className="relative size-[64px] sm:size-[72px] shrink-0 grid place-items-center">
-                    <svg viewBox="0 0 80 80" className="size-full">
-                      {/* Dark Ring of Tape Around Reel (Starts thin, grows as audio plays) */}
-                      <circle
-                        cx="40"
-                        cy="40"
-                        r={Math.max(16, rightTapeRadius)}
-                        fill="#2A170A"
-                        stroke="#190E06"
-                        strokeWidth="1"
-                        className="transition-all duration-200"
-                      />
-
-                      {/* Rotating White Hub with 6 Spokes and Center Hole */}
-                      <g
-                        className={cn(isPlaying && !prefersReduced && "animate-spin")}
-                        style={{
-                          transformOrigin: "40px 40px",
-                          animationDuration: rotationDuration,
-                          animationPlayState: isPlaying ? "running" : "paused",
-                        }}
-                      >
-                        {/* Circle Outline of Hub */}
-                        <circle
-                          cx="40"
-                          cy="40"
-                          r="16"
-                          fill="#FAF8F5"
-                          stroke="#94A3B8"
-                          strokeWidth="1.5"
-                        />
-
-                        {/* 6 Spokes from Center to Edge */}
-                        {Array.from({ length: 6 }).map((_, i) => {
-                          const rad = (i * 60 * Math.PI) / 180;
-                          const x2 = 40 + 13 * Math.cos(rad);
-                          const y2 = 40 + 13 * Math.sin(rad);
-                          return (
-                            <line
-                              key={i}
-                              x1="40"
-                              y1="40"
-                              x2={x2}
-                              y2={y2}
-                              stroke="#475569"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                            />
-                          );
-                        })}
-
-                        {/* Center Hole */}
-                        <circle cx="40" cy="40" r="5" fill="#0B1120" />
-                      </g>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
-              {/* Step 5: The Magnetic Tape Progress Line (3-4px line between window and buttons) */}
-              <div className="relative flex items-center py-1">
-                <input
-                  type="range"
-                  min={0}
-                  max={duration || 100}
-                  step={0.5}
-                  value={currentTime}
-                  onChange={handleSeekChange}
-                  aria-label="Seek magnetic tape position"
-                  aria-valuemin={0}
-                  aria-valuemax={duration || 100}
-                  aria-valuenow={currentTime}
-                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-300 accent-[#5A67D8] focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                  style={{
-                    background: `linear-gradient(to right, #5A67D8 ${progressRatio * 100}%, #CBD5E1 ${progressRatio * 100}%)`,
-                  }}
-                />
-              </div>
-
-              {/* Step 4: The Buttons (Bottom section ~25% height, INSIDE the cassette body!) */}
-              <div className="flex h-[20%] items-center justify-between gap-1 sm:gap-2">
-                {/* 1. Rewind (-10s) */}
-                <button
-                  type="button"
-                  onClick={() => seekDelta(-10)}
-                  aria-label="Rewind 10 seconds"
-                  title="Rewind 10s (Left Arrow)"
-                  className="flex flex-1 items-center justify-center h-8 sm:h-9 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all hover:bg-white active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.18)] focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                >
-                  <Rewind className="size-3.5 sm:size-4 fill-current" />
-                </button>
-
-                {/* 2. Play / Pause Button (Bigger, glows/indigo when playing!) */}
-                <button
-                  type="button"
-                  onClick={togglePlay}
-                  aria-label={isPlaying ? "Pause audio" : "Play audio"}
-                  title="Play / Pause (Space)"
-                  className={cn(
-                    "flex flex-[1.3] items-center justify-center h-8 sm:h-9 rounded-lg border transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none",
-                    isPlaying
-                      ? "border-[#5A67D8] bg-[#5A67D8] text-white shadow-[0_2px_10px_rgba(90,103,216,0.5),inset_0_-2px_0_rgba(0,0,0,0.2)]"
-                      : "border-[#1A365D]/25 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:bg-white",
-                  )}
-                >
-                  {isPlaying ? (
-                    <Pause className="size-4 fill-current" />
-                  ) : (
-                    <Play className="size-4 fill-current ml-0.5" />
-                  )}
-                </button>
-
-                {/* 3. Stop (Resets to 0:00) */}
-                <button
-                  type="button"
-                  onClick={stopPlayback}
-                  aria-label="Stop audio"
-                  title="Stop (Reset to 0:00)"
-                  className="flex flex-1 items-center justify-center h-8 sm:h-9 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all hover:bg-white active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.18)] focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                >
-                  <Square className="size-3.5 sm:size-4 fill-current" />
-                </button>
-
-                {/* 4. Forward (+10s) */}
-                <button
-                  type="button"
-                  onClick={() => seekDelta(10)}
-                  aria-label="Fast forward 10 seconds"
-                  title="Forward 10s (Right Arrow)"
-                  className="flex flex-1 items-center justify-center h-8 sm:h-9 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all hover:bg-white active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.18)] focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                >
-                  <FastForward className="size-3.5 sm:size-4 fill-current" />
-                </button>
-
-                {/* 5. Speed (0.5x to 2x) */}
-                <div className="relative flex-1 flex">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playMechanicalClick();
-                      setSpeedMenuOpen(!speedMenuOpen);
-                      setVolumeSliderOpen(false);
-                    }}
-                    aria-label="Playback speed"
-                    title={`Speed: ${playbackRate}x`}
-                    className="flex w-full items-center justify-center h-8 sm:h-9 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all hover:bg-white active:scale-95 focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                  >
-                    <span className="font-mono text-[10px] sm:text-[11px] font-bold text-[#1A365D]">
-                      {playbackRate}x
-                    </span>
-                  </button>
-
-                  <AnimatePresence>
-                    {speedMenuOpen ? (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 8 }}
-                        className="absolute bottom-11 right-0 z-50 flex flex-col gap-0.5 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] p-1 shadow-lg"
-                      >
-                        {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
-                          <button
-                            key={rate}
-                            type="button"
-                            onClick={() => changeSpeed(rate)}
-                            className={cn(
-                              "rounded px-2 py-0.5 text-[11px] font-mono font-semibold transition-colors",
-                              playbackRate === rate
-                                ? "bg-[#1A365D] text-white"
-                                : "text-[#1A365D] hover:bg-[#1A365D]/10",
-                            )}
+                      {/* Volume Slider Popover */}
+                      <AnimatePresence>
+                        {volumeSliderOpen ? (
+                          <motion.div
+                            initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                            className="absolute bottom-full right-0 mb-2 flex items-center gap-2 rounded-xl border border-[#1A365D]/25 bg-[#FAF6EE] p-2 shadow-xl z-30"
                           >
-                            {rate}x
-                          </button>
-                        ))}
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
-                </div>
-
-                {/* 6. Volume Control */}
-                <div className="relative flex-1 flex">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      playMechanicalClick();
-                      setVolumeSliderOpen(!volumeSliderOpen);
-                      setSpeedMenuOpen(false);
-                    }}
-                    aria-label="Volume settings"
-                    className="flex w-full items-center justify-center h-8 sm:h-9 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all hover:bg-white active:scale-95 focus-visible:ring-2 focus-visible:ring-[#5A67D8] focus-visible:outline-none"
-                  >
-                    {isMuted || volume === 0 ? (
-                      <VolumeX className="size-3.5 sm:size-4 text-red-600" />
-                    ) : (
-                      <Volume2 className="size-3.5 sm:size-4 text-[#1A365D]" />
-                    )}
-                  </button>
-
-                  <AnimatePresence>
-                    {volumeSliderOpen ? (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 8 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 8 }}
-                        className="absolute bottom-11 right-0 z-50 flex w-32 flex-col gap-1.5 rounded-lg border border-[#1A365D]/20 bg-[#FAF6EE] p-2.5 shadow-lg"
-                      >
-                        <div className="flex items-center justify-between text-[10px] font-semibold text-[#1A365D]">
-                          <span>Volume</span>
-                          <span className="font-mono">{Math.round(isMuted ? 0 : volume * 100)}%</span>
-                        </div>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={isMuted ? 0 : volume}
-                          onChange={(e) => changeVolume(parseFloat(e.target.value))}
-                          className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-slate-300 accent-[#5A67D8]"
-                        />
-                        <button
-                          type="button"
-                          onClick={toggleMute}
-                          className="rounded bg-[#1A365D]/10 py-0.5 text-center text-[9px] font-semibold text-[#1A365D] hover:bg-[#1A365D]/20 transition-colors"
-                        >
-                          {isMuted ? "Unmute" : "Mute"}
-                        </button>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>
+                            <button
+                              type="button"
+                              onClick={toggleMute}
+                              className="text-[#1A365D] hover:opacity-75"
+                            >
+                              {isMuted ? (
+                                <VolumeX className="size-3.5" />
+                              ) : (
+                                <Volume2 className="size-3.5" />
+                              )}
+                            </button>
+                            <input
+                              type="range"
+                              min="0"
+                              max="1"
+                              step="0.05"
+                              value={isMuted ? 0 : volume}
+                              onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                              aria-label="Volume slider"
+                              className="h-1.5 w-20 cursor-pointer accent-[#5A67D8]"
+                            />
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
