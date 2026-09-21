@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { GraduationCap, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
-import { signOutAction } from "@/lib/actions";
+import { getCurrentUserAction, signOutAction } from "@/lib/actions";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { initials } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ const supabaseReady = Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL);
 
 export function AuthButtons() {
   const router = useRouter();
+  const pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [user, setUser] = useState<{
     email: string;
@@ -23,29 +24,31 @@ export function AuthButtons() {
     role: string;
   } | null>(null);
 
-  useEffect(() => {
-    if (!supabaseReady) return;
-    const supabase = getSupabaseBrowserClient();
+  const refreshUser = useCallback(async () => {
+    try {
+      const u = await getCurrentUserAction();
+      setUser(u);
+    } catch {
+      // Ignore
+    }
+  }, []);
 
-    void supabase.auth.getUser().then(({ data }) => {
-      const u = data.user;
-      if (!u) return;
-      const meta = (u.user_metadata ?? {}) as {
-        full_name?: string | null;
-        role?: string | null;
-      };
-      setUser({
-        email: u.email ?? "",
-        name: meta.full_name ?? u.email ?? null,
-        role: meta.role === "teacher" ? "teacher" : "student",
-      });
-    });
+  useEffect(() => {
+    // 1. Fetch current user on mount and whenever pathname changes
+    void refreshUser();
+
+    // 2. Listen to custom auth change events
+    window.addEventListener("basirshelf:auth-change", refreshUser);
+
+    if (!supabaseReady) return () => window.removeEventListener("basirshelf:auth-change", refreshUser);
+
+    const supabase = getSupabaseBrowserClient();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session?.user) {
-        setUser(null);
+        void refreshUser();
         return;
       }
       const meta = (session.user.user_metadata ?? {}) as {
@@ -59,8 +62,11 @@ export function AuthButtons() {
       });
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      window.removeEventListener("basirshelf:auth-change", refreshUser);
+      subscription.unsubscribe();
+    };
+  }, [pathname, refreshUser]);
 
   function handleSignOut() {
     startTransition(async () => {

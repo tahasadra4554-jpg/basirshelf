@@ -6,10 +6,11 @@ import { z } from "zod";
 import type { ActionResult, Book, Section } from "@/lib/types";
 
 import { getDataSource, usesSupabase } from "@/lib/db";
-import { createSessionCookie, destroySessionCookie } from "@/lib/session";
+import { createSessionCookie, destroySessionCookie, getSession } from "@/lib/session";
 import { findTeacherByUsername, STUDENT_ROLE } from "@/lib/teachers";
 import { isSafeExternalUrl } from "@/lib/utils";
-import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/client";
 
 const urlField = z
   .string()
@@ -80,6 +81,45 @@ export async function teacherLoginAction(
   return { ok: true, message: `Welcome, ${account.full_name}` };
 }
 
+export async function getCurrentUserAction(): Promise<{
+  email: string;
+  name: string | null;
+  role: string;
+} | null> {
+  // 1. Try server client Supabase auth
+  if (usesSupabase()) {
+    try {
+      const serverClient = await createSupabaseServerClient();
+      const { data } = await serverClient.auth.getUser();
+      if (data?.user) {
+        const meta = (data.user.user_metadata ?? {}) as {
+          full_name?: string | null;
+          role?: string | null;
+        };
+        return {
+          email: data.user.email ?? "",
+          name: meta.full_name ?? data.user.email ?? null,
+          role: meta.role === "teacher" ? "teacher" : "student",
+        };
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  // 2. Try session cookie (e.g. teachers or local session)
+  const session = await getSession();
+  if (session) {
+    return {
+      email: session.username ? `${session.username}@basir.internal` : "",
+      name: session.name,
+      role: session.role,
+    };
+  }
+
+  return null;
+}
+
 export async function studentSignUpAction(
   _prev: ActionResult | null,
   formData: FormData,
@@ -97,21 +137,107 @@ export async function studentSignUpAction(
     );
   }
 
-  const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.auth.signUp({
-    email: parsed.data.email,
-    password: parsed.data.password,
-    options: {
-      data: {
-        full_name: parsed.data.full_name ?? null,
-        role: STUDENT_ROLE,
+  const email = parsed.data.email.toLowerCase().trim();
+  const password = parsed.data.password;
+  const fullName = parsed.data.full_name?.trim() || null;
+
+  const serverClient = await createSupabaseServerClient();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  let createdUser = false;
+  let userId: string | null = null;
+
+  // 1. Try to create user via Service Role Admin (auto-confirms email so student never gets blocked by "Email not confirmed")
+  if (serviceKey) {
+    try {
+      const serviceClient = createServiceClient();
+      const { data: createData, error: createError } = await serviceClient.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName,
+          role: STUDENT_ROLE,
+        },
+      });
+
+      if (!createError && createData?.user) {
+        createdUser = true;
+        userId = createData.user.id;
+      } else if (createError) {
+        const msg = createError.message.toLowerCase();
+        if (msg.includes("already registered") || msg.includes("already exists") || (createError as any).status === 422) {
+          return fail("این ایمیل قبلاً ثبت‌نام شده است. لطفاً وارد شوید.");
+        }
+      }
+    } catch (adminErr) {
+      console.error("Admin user creation failed, falling back to standard signUp:", adminErr);
+    }
+  }
+
+  // 2. Fallback to standard signUp if not created via admin
+  if (!createdUser) {
+    const { data: signUpData, error: signUpError } = await serverClient.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role: STUDENT_ROLE,
+        },
       },
-    },
+    });
+
+    if (signUpError) {
+      return fail(translateAuthError(signUpError.message));
+    }
+
+    userId = signUpData?.user?.id ?? null;
+
+    // If unconfirmed, attempt auto-confirm with service role
+    if (serviceKey && userId) {
+      try {
+        const serviceClient = createServiceClient();
+        await serviceClient.auth.admin.updateUserById(userId, { email_confirm: true });
+      } catch {}
+    }
+  }
+
+  // 3. Immediately sign in the newly registered user to establish session cookies in browser
+  let { data: signInData, error: signInError } = await serverClient.auth.signInWithPassword({
+    email,
+    password,
   });
-  if (error) return fail(translateAuthError(error.message));
+
+  if (signInError && serviceKey) {
+    // If signin fails because email wasn't confirmed, auto-confirm and retry
+    try {
+      const serviceClient = createServiceClient();
+      const linkRes = await serviceClient.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+      });
+      if (linkRes.data?.user?.id) {
+        await serviceClient.auth.admin.updateUserById(linkRes.data.user.id, { email_confirm: true });
+        const retry = await serverClient.auth.signInWithPassword({ email, password });
+        signInData = retry.data;
+        signInError = retry.error;
+      }
+    } catch {}
+  }
+
+  // 4. Also set the app session cookie
+  const activeUserId = userId ?? signInData?.user?.id;
+  if (activeUserId) {
+    await createSessionCookie({
+      sub: activeUserId,
+      name: fullName ?? email.split("@")[0],
+      role: "student",
+    });
+  }
 
   revalidatePath("/", "layout");
-  return { ok: true, message: "Your account is ready. Welcome to the shelf!" };
+  return { ok: true, message: "حساب کاربری شما با موفقیت ایجاد شد و وارد شدید. خوش آمدید!" };
 }
 
 export async function studentLoginAction(
@@ -132,34 +258,87 @@ export async function studentLoginAction(
     );
   }
 
-  const supabase = getSupabaseBrowserClient();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
-    password: parsed.data.password,
+  const email = parsed.data.email.toLowerCase().trim();
+  const password = parsed.data.password;
+  const serverClient = await createSupabaseServerClient();
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  let { data, error } = await serverClient.auth.signInWithPassword({
+    email,
+    password,
   });
+
+  // If Supabase rejected because email was unconfirmed, auto-confirm it using admin API and retry!
+  if (error && (error.message.includes("not confirmed") || error.message.includes("Email not confirmed"))) {
+    if (serviceKey) {
+      try {
+        const serviceClient = createServiceClient();
+        const linkRes = await serviceClient.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+        });
+        if (linkRes.data?.user?.id) {
+          await serviceClient.auth.admin.updateUserById(linkRes.data.user.id, {
+            email_confirm: true,
+          });
+          // Retry signing in now that email is confirmed!
+          const retry = await serverClient.auth.signInWithPassword({
+            email,
+            password,
+          });
+          data = retry.data;
+          error = retry.error;
+        }
+      } catch (confirmErr) {
+        console.error("Auto-confirm on login failed:", confirmErr);
+      }
+    }
+  }
+
   if (error) return fail(translateAuthError(error.message));
 
+  // Also set the app session cookie for unified session state
+  if (data?.user) {
+    const meta = (data.user.user_metadata ?? {}) as {
+      full_name?: string | null;
+      role?: string | null;
+    };
+    await createSessionCookie({
+      sub: data.user.id,
+      name: meta.full_name ?? data.user.email?.split("@")[0] ?? "Student",
+      role: meta.role === "teacher" ? "teacher" : "student",
+    });
+  }
+
   revalidatePath("/", "layout");
-  return { ok: true, message: "Signed in" };
+  return { ok: true, message: "با موفقیت وارد شدید." };
 }
 
 export async function signOutAction(): Promise<ActionResult> {
   await destroySessionCookie();
   if (usesSupabase()) {
-    const supabase = getSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    try {
+      const serverClient = await createSupabaseServerClient();
+      await serverClient.auth.signOut();
+    } catch {}
   }
   revalidatePath("/", "layout");
-  return { ok: true, message: "Signed out." };
+  return { ok: true, message: "با موفقیت خارج شدید." };
 }
 
 function translateAuthError(message: string): string {
-  if (message.includes("Invalid login credentials"))
-    return "Incorrect email or password.";
-  if (message.includes("already registered"))
-    return "That email is already registered.";
-  if (message.includes("Password should be"))
-    return "The password must be at least 6 characters.";
+  if (message.includes("Invalid login credentials") || message.includes("invalid_credentials"))
+    return "ایمیل یا رمز عبور اشتباه است.";
+  if (message.includes("already registered") || message.includes("already exists"))
+    return "این ایمیل قبلاً ثبت‌نام شده است. لطفاً وارد شوید.";
+  if (message.includes("Password should be") || message.includes("least 6 characters"))
+    return "رمز عبور باید حداقل ۶ کاراکتر باشد.";
+  if (message.includes("Email address") && message.includes("is invalid"))
+    return "فرمت ایمیل نامعتبر است. لطفاً یک ایمیل معتبر وارد کنید.";
+  if (message.includes("Email not confirmed"))
+    return "ایمیل تأیید نشده است. لطفاً مجدداً تلاش کنید.";
+  if (message.includes("rate limit"))
+    return "تعداد درخواست‌ها بیش از حد مجاز است. لطفاً چند دقیقه صبر کنید.";
   return message;
 }
 
