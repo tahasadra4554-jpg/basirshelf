@@ -22,10 +22,8 @@ import {
 } from "lucide-react";
 
 import type { Section } from "@/lib/types";
-
 import { cn } from "@/lib/utils";
 
-// Mechanical 24-Teeth Main Gear Outline SVG Path (340x340 viewBox, center 170,170)
 const MAIN_GEAR_PATH = (() => {
   const cx = 170;
   const cy = 170;
@@ -34,15 +32,12 @@ const MAIN_GEAR_PATH = (() => {
   const rInner = 144;
   const toothWidth = 0.45;
   const step = (2 * Math.PI) / teeth;
-
   let d = "";
   for (let i = 0; i < teeth; i++) {
-    const angleStart = i * step;
-    const a1 = angleStart;
-    const a2 = angleStart + step * (1 - toothWidth) * 0.5;
-    const a3 = angleStart + step * (1 + toothWidth) * 0.5;
+    const a1 = i * step;
+    const a2 = i * step + step * (1 - toothWidth) * 0.5;
+    const a3 = i * step + step * (1 + toothWidth) * 0.5;
     const a4 = (i + 1) * step;
-
     const x1 = cx + rInner * Math.cos(a1);
     const y1 = cy + rInner * Math.sin(a1);
     const x2 = cx + rOuter * Math.cos(a2);
@@ -51,18 +46,13 @@ const MAIN_GEAR_PATH = (() => {
     const y3 = cy + rOuter * Math.sin(a3);
     const x4 = cx + rInner * Math.cos(a4);
     const y4 = cy + rInner * Math.sin(a4);
-
     if (i === 0) d += `M ${x1.toFixed(2)} ${y1.toFixed(2)} `;
     else d += `L ${x1.toFixed(2)} ${y1.toFixed(2)} `;
-    d += `L ${x2.toFixed(2)} ${y2.toFixed(2)} `;
-    d += `L ${x3.toFixed(2)} ${y3.toFixed(2)} `;
-    d += `L ${x4.toFixed(2)} ${y4.toFixed(2)} `;
+    d += `L ${x2.toFixed(2)} ${y2.toFixed(2)} L ${x3.toFixed(2)} ${y3.toFixed(2)} L ${x4.toFixed(2)} ${y4.toFixed(2)} `;
   }
-  d += "Z";
-  return d;
+  return d + "Z";
 })();
 
-// Mechanical 12-Teeth Mini Gear Outline SVG Path (60x60 viewBox, center 30,30)
 const MINI_GEAR_PATH = (() => {
   const cx = 30;
   const cy = 30;
@@ -71,15 +61,12 @@ const MINI_GEAR_PATH = (() => {
   const rInner = 22;
   const toothWidth = 0.42;
   const step = (2 * Math.PI) / teeth;
-
   let d = "";
   for (let i = 0; i < teeth; i++) {
-    const angleStart = i * step;
-    const a1 = angleStart;
-    const a2 = angleStart + step * (1 - toothWidth) * 0.5;
-    const a3 = angleStart + step * (1 + toothWidth) * 0.5;
+    const a1 = i * step;
+    const a2 = i * step + step * (1 - toothWidth) * 0.5;
+    const a3 = i * step + step * (1 + toothWidth) * 0.5;
     const a4 = (i + 1) * step;
-
     const x1 = cx + rInner * Math.cos(a1);
     const y1 = cy + rInner * Math.sin(a1);
     const x2 = cx + rOuter * Math.cos(a2);
@@ -88,15 +75,11 @@ const MINI_GEAR_PATH = (() => {
     const y3 = cy + rOuter * Math.sin(a3);
     const x4 = cx + rInner * Math.cos(a4);
     const y4 = cy + rInner * Math.sin(a4);
-
     if (i === 0) d += `M ${x1.toFixed(2)} ${y1.toFixed(2)} `;
     else d += `L ${x1.toFixed(2)} ${y1.toFixed(2)} `;
-    d += `L ${x2.toFixed(2)} ${y2.toFixed(2)} `;
-    d += `L ${x3.toFixed(2)} ${y3.toFixed(2)} `;
-    d += `L ${x4.toFixed(2)} ${y4.toFixed(2)} `;
+    d += `L ${x2.toFixed(2)} ${y2.toFixed(2)} L ${x3.toFixed(2)} ${y3.toFixed(2)} L ${x4.toFixed(2)} ${y4.toFixed(2)} `;
   }
-  d += "Z";
-  return d;
+  return d + "Z";
 })();
 
 function playMechanicalTick(isMajor = false) {
@@ -120,7 +103,6 @@ function playMechanicalTick(isMajor = false) {
     setTimeout(() => ctx.close().catch(() => {}), 100);
   } catch {}
 }
-
 function playMechanicalWhir() {
   try {
     const AudioCtx =
@@ -153,9 +135,7 @@ interface Particle {
   opacity: number;
   targetX: number;
   targetY: number;
-  isBurst?: boolean;
 }
-
 interface Spark {
   id: number;
   x: number;
@@ -163,7 +143,6 @@ interface Spark {
   radius: number;
   opacity: number;
 }
-
 interface GearDialModalProps {
   section: Section | null;
   bookTitle?: string;
@@ -171,12 +150,7 @@ interface GearDialModalProps {
   onSelectOption: (optionId: "video" | "audio" | "images" | "pdf", section: Section) => void;
 }
 
-export function GearDialModal({
-  section,
-  bookTitle,
-  onClose,
-  onSelectOption,
-}: GearDialModalProps) {
+export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: GearDialModalProps) {
   const id = useId();
   const prefersReduced = useReducedMotion();
   const dialRef = useRef<HTMLDivElement>(null);
@@ -196,7 +170,6 @@ export function GearDialModal({
   const hasAudio = Boolean(section?.audio_url && section.audio_url.trim().length > 0);
   const hasHandout = Boolean(section?.handout_url && section.handout_url.trim().length > 0);
 
-  // FIX 2 & 3 & 7 & 8: Distinct colors per option
   const options = [
     {
       id: "video" as const,
@@ -253,43 +226,32 @@ export function GearDialModal({
   ];
 
   const rawRotation = useMotionValue(0);
-  const rotation = useSpring(rawRotation, {
-    stiffness: 280,
-    damping: 26,
-    mass: 0.9,
-  });
-
+  const rotation = useSpring(rawRotation, { stiffness: 280, damping: 26, mass: 0.9 });
   const [activeIndex, setActiveIndex] = useState(0);
   const lastDetentAngle = useRef(0);
+  const counterRotation = useTransform(rotation, (v) => -v);
 
-  const counterRotation = useTransform(rotation, (val) => -val);
-
-  // FEATURE 1: 3D PARALLAX TILT
   const tiltYValue = useMotionValue(-5);
   const smoothTiltY = useSpring(tiltYValue, { stiffness: 220, damping: 20 });
 
-  // FEATURE 2: MINI GEAR ROTATION (1.5x counter + idle 1 turn per 30s)
   const idleRotation = useMotionValue(0);
   useEffect(() => {
     if (prefersReduced) return;
-    let lastTime = performance.now();
-    let animId: number;
-    const animateIdle = (now: number) => {
-      const dt = (now - lastTime) / 1000;
-      lastTime = now;
+    let last = performance.now();
+    let raf = 0;
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000;
+      last = now;
       idleRotation.set(idleRotation.get() + dt * 12);
-      animId = requestAnimationFrame(animateIdle);
+      raf = requestAnimationFrame(tick);
     };
-    animId = requestAnimationFrame(animateIdle);
-    return () => cancelAnimationFrame(animId);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
   }, [idleRotation, prefersReduced]);
 
-  const miniGearRotation = useTransform(
-    [rotation, idleRotation],
-    ([mainRot, idleRot]: number[]) => {
-      return -mainRot * 1.5 + (prefersReduced ? 0 : idleRot);
-    },
-  );
+  const miniGearRotation = useTransform([rotation, idleRotation], ([mainRot, idleRot]: number[]) => {
+    return -mainRot * 1.5 + (prefersReduced ? 0 : idleRot);
+  });
 
   const [dragging, setDragging] = useState(false);
   const isDraggingRef = useRef(false);
@@ -298,14 +260,13 @@ export function GearDialModal({
   const lastPointerAngle = useRef(0);
   const angularVelocity = useRef(0);
 
-  // FEATURE 3: PARTICLES
   const particlesRef = useRef<Particle[]>([]);
   const sparksRef = useRef<Spark[]>([]);
   const nextParticleId = useRef(0);
   const lastSpawnTime = useRef(0);
 
   useEffect(() => {
-    const unsubscribe = rotation.on("change", (latest) => {
+    const unsub = rotation.on("change", (latest) => {
       const normalized = ((-latest % 360) + 360) % 360;
       const index = Math.round(normalized / 90) % 4;
       setActiveIndex((prev) => {
@@ -320,43 +281,35 @@ export function GearDialModal({
         playMechanicalTick(false);
       }
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [rotation]);
 
   const getAngle = useCallback((clientX: number, clientY: number) => {
     if (!dialRef.current) return 0;
     const rect = dialRef.current.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    return (Math.atan2(dy, dx) * 180) / Math.PI;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    return (Math.atan2(clientY - cy, clientX - cx) * 180) / Math.PI;
   }, []);
 
   const spawnParticle = useCallback(
     (isBurst = false) => {
       if (prefersReduced || !dialRef.current) return;
-      const maxParticles = isMobile ? 15 : 30;
-      if (particlesRef.current.length >= maxParticles && !isBurst) return;
-
+      const max = isMobile ? 15 : 30;
+      if (particlesRef.current.length >= max && !isBurst) return;
       const rect = dialRef.current.getBoundingClientRect();
       const cx = rect.width / 2;
       const cy = rect.height / 2;
       const rOuter = (rect.width / 2) * 0.94;
-
       const targetX = cx;
       const targetY = cy - (rect.width / 2) * 0.62;
-
       const angle = isBurst ? -Math.PI / 2 + (Math.random() - 0.5) * 1.4 : Math.random() * Math.PI * 2;
-
       const x = cx + Math.cos(angle) * rOuter;
       const y = cy + Math.sin(angle) * rOuter;
-
       const dx = targetX - x;
       const dy = targetY - y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       const speed = isBurst ? 220 + Math.random() * 100 : 130 + Math.random() * 80;
-
       particlesRef.current.push({
         id: nextParticleId.current++,
         x,
@@ -367,7 +320,6 @@ export function GearDialModal({
         opacity: 0.85 + Math.random() * 0.15,
         targetX,
         targetY,
-        isBurst,
       });
     },
     [isMobile, prefersReduced],
@@ -375,37 +327,30 @@ export function GearDialModal({
 
   useEffect(() => {
     if (prefersReduced) return;
-    let animId: number;
-    let lastTime = performance.now();
-
+    let raf = 0;
+    let last = performance.now();
     const render = (now: number) => {
-      const dt = Math.min((now - lastTime) / 1000, 0.1);
-      lastTime = now;
-
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext("2d");
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          const spawnInterval = isDraggingRef.current ? 220 : 1000;
-          if (now - lastSpawnTime.current >= spawnInterval) {
+          const interval = isDraggingRef.current ? 220 : 1000;
+          if (now - lastSpawnTime.current >= interval) {
             lastSpawnTime.current = now;
             spawnParticle(false);
           }
-
           const particles = particlesRef.current;
           for (let i = particles.length - 1; i >= 0; i--) {
             const p = particles[i];
             p.x += p.vx * dt;
             p.y += p.vy * dt;
-
             const dx = p.targetX - p.x;
             const dy = p.targetY - p.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-
             if (dist < 24) p.opacity -= dt * 4;
-
             if (p.opacity <= 0 || dist < 12) {
               sparksRef.current.push({
                 id: nextParticleId.current++,
@@ -417,7 +362,6 @@ export function GearDialModal({
               particles.splice(i, 1);
               continue;
             }
-
             ctx.save();
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.size / 2, 0, Math.PI * 2);
@@ -427,7 +371,6 @@ export function GearDialModal({
             ctx.fill();
             ctx.restore();
           }
-
           const sparks = sparksRef.current;
           for (let i = sparks.length - 1; i >= 0; i--) {
             const s = sparks[i];
@@ -447,61 +390,87 @@ export function GearDialModal({
           }
         }
       }
-      animId = requestAnimationFrame(render);
+      raf = requestAnimationFrame(render);
     };
-
-    animId = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animId);
+    raf = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(raf);
   }, [spawnParticle, prefersReduced]);
+
+  // PROBLEM 2: Robust pointer drag handling for mouse + touch
+  const handleWindowPointerMove = useCallback(
+    (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      e.preventDefault();
+      const currentAngle = getAngle(e.clientX, e.clientY);
+      let delta = currentAngle - startAngle.current;
+      if (delta > 180) delta -= 360;
+      if (delta < -180) delta += 360;
+      let frameDelta = currentAngle - lastPointerAngle.current;
+      if (frameDelta > 180) frameDelta -= 360;
+      if (frameDelta < -180) frameDelta += 360;
+      angularVelocity.current = frameDelta;
+      lastPointerAngle.current = currentAngle;
+      // Use requestAnimationFrame for smooth 60fps
+      requestAnimationFrame(() => {
+        rawRotation.set(startRotation.current + delta);
+      });
+      const tiltDir = Math.max(-8, Math.min(8, frameDelta * 2));
+      tiltYValue.set(-5 + tiltDir);
+    },
+    [getAngle, rawRotation, tiltYValue],
+  );
+
+  const handleWindowPointerUp = useCallback(
+    (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      setDragging(false);
+      tiltYValue.set(-5);
+      window.removeEventListener("pointermove", handleWindowPointerMove as any);
+      window.removeEventListener("pointerup", handleWindowPointerUp as any);
+      window.removeEventListener("pointercancel", handleWindowPointerUp as any);
+      try {
+        (e.target as HTMLElement)?.releasePointerCapture?.((e as any).pointerId);
+      } catch {}
+      const currentRot = rawRotation.get();
+      const targetWithMomentum = currentRot + angularVelocity.current * 4;
+      const snapped = Math.round(targetWithMomentum / 90) * 90;
+      rawRotation.set(snapped);
+      for (let i = 0; i < (isMobile ? 6 : 12); i++) spawnParticle(true);
+    },
+    [handleWindowPointerMove, isMobile, rawRotation, spawnParticle, tiltYValue],
+  );
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
     isDraggingRef.current = true;
     setDragging(true);
     startAngle.current = getAngle(e.clientX, e.clientY);
     startRotation.current = rawRotation.get();
     lastPointerAngle.current = startAngle.current;
     angularVelocity.current = 0;
+    window.addEventListener("pointermove", handleWindowPointerMove as any, { passive: false });
+    window.addEventListener("pointerup", handleWindowPointerUp as any);
+    window.addEventListener("pointercancel", handleWindowPointerUp as any);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
-    const currentAngle = getAngle(e.clientX, e.clientY);
-    let delta = currentAngle - startAngle.current;
-    if (delta > 180) delta -= 360;
-    if (delta < -180) delta += 360;
-
-    let frameDelta = currentAngle - lastPointerAngle.current;
-    if (frameDelta > 180) frameDelta -= 360;
-    if (frameDelta < -180) frameDelta += 360;
-    angularVelocity.current = frameDelta;
-    lastPointerAngle.current = currentAngle;
-
-    rawRotation.set(startRotation.current + delta);
-
-    const tiltDirection = Math.max(-8, Math.min(8, frameDelta * 2));
-    tiltYValue.set(-5 + tiltDirection);
-  };
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    setDragging(false);
-    try {
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    } catch {}
-    tiltYValue.set(-5);
-    const currentRot = rawRotation.get();
-    const targetWithMomentum = currentRot + angularVelocity.current * 4;
-    const snapped = Math.round(targetWithMomentum / 90) * 90;
-    rawRotation.set(snapped);
-    for (let i = 0; i < (isMobile ? 6 : 12); i++) spawnParticle(true);
-  };
+  // Cleanup listeners on unmount
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", handleWindowPointerMove as any);
+      window.removeEventListener("pointerup", handleWindowPointerUp as any);
+      window.removeEventListener("pointercancel", handleWindowPointerUp as any);
+    };
+  }, [handleWindowPointerMove, handleWindowPointerUp]);
 
   useEffect(() => {
     if (!section) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -514,8 +483,8 @@ export function GearDialModal({
         handleSelectActive();
       }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [section, activeIndex]);
 
   const stepDial = (direction: 1 | -1) => {
@@ -526,6 +495,7 @@ export function GearDialModal({
   };
 
   const rotateToOption = (targetIndex: number) => {
+    if (isDraggingRef.current) return;
     const currentRot = rawRotation.get();
     const currentNorm = ((-currentRot % 360) + 360) % 360;
     const currentIndex = Math.round(currentNorm / 90) % 4;
@@ -549,7 +519,10 @@ export function GearDialModal({
 
   const activeOption = options[activeIndex];
   const ActiveIcon = activeOption.icon;
+
+  // PROBLEM 3: Mini gears evenly spaced at 0°, 120°, 240° with same distance
   const miniGearAngles = [0, 120, 240];
+  const miniGearRadius = isMobile ? 140 : 180;
 
   return (
     <AnimatePresence>
@@ -597,12 +570,10 @@ export function GearDialModal({
               </p>
             </div>
 
-            {/* FIX 4: Perspective container 1200px */}
             <div
               className="gear-dial relative my-1 sm:my-2 size-[260px] sm:size-[320px] md:size-[340px] max-w-[85vw] max-h-[60vh] aspect-square shrink-0 m-auto"
-              style={{ perspective: "1200px" }}
+              style={{ perspective: "1200px", touchAction: "none" }}
             >
-              {/* FIX 3: COLOR-CHANGING HALO BEHIND GEAR */}
               <motion.div
                 key={`halo-${activeOption.id}`}
                 initial={{ opacity: 0.4 }}
@@ -611,12 +582,8 @@ export function GearDialModal({
                   scale: dragging ? 1.08 : [1, 1.05, 1],
                 }}
                 transition={{
-                  opacity: dragging
-                    ? { duration: 0.2 }
-                    : { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                  scale: dragging
-                    ? { duration: 0.2 }
-                    : { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                  opacity: dragging ? { duration: 0.2 } : { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                  scale: dragging ? { duration: 0.2 } : { duration: 2, repeat: Infinity, ease: "easeInOut" },
                 }}
                 className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{
@@ -630,7 +597,6 @@ export function GearDialModal({
                 }}
               />
 
-              {/* FIX 4: Glow from underneath - amber floating */}
               <div
                 className="pointer-events-none absolute left-1/2 top-1/2 size-[115%] -translate-x-1/2 -translate-y-1/2 rounded-full"
                 style={{
@@ -639,7 +605,6 @@ export function GearDialModal({
                 }}
               />
 
-              {/* Fixed 12 o'clock Pointer */}
               <div
                 className="pointer-events-none absolute -top-3.5 left-1/2 z-40 flex -translate-x-1/2 flex-col items-center"
                 aria-hidden="true"
@@ -659,61 +624,44 @@ export function GearDialModal({
                 />
               </div>
 
-              {/* FIX 6: THREE MINI GEARS - navy body, amber teeth */}
+              {/* PROBLEM 3: Mini gears evenly spaced using rotate(angle) translate(radius) rotate(-angle) */}
               {miniGearAngles.map((angleDeg, idx) => {
-                const rad = (angleDeg * Math.PI) / 180;
-                const distancePct = isMobile ? 50.5 : 49.5;
-                const leftPos = 50 + Math.cos(rad) * distancePct;
-                const topPos = 50 + Math.sin(rad) * distancePct;
                 const gearSize = isMobile ? 40 : 60;
-
                 return (
-                  <motion.div
+                  <div
                     key={`mini-gear-${angleDeg}`}
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{
-                      delay: 0.1 * idx,
-                      type: "spring",
-                      stiffness: 260,
-                      damping: 20,
-                    }}
+                    className="pointer-events-none absolute z-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                     style={{
-                      position: "absolute",
-                      top: `${topPos}%`,
-                      left: `${leftPos}%`,
+                      top: "50%",
+                      left: "50%",
                       width: gearSize,
                       height: gearSize,
-                      transform: "translate(-50%, -50%) translateZ(4px)",
-                      rotate: miniGearRotation,
+                      // Perfectly symmetric: same distance from center, teeth meshing just outside main gear
+                      transform: `translate(-50%, -50%) rotate(${angleDeg}deg) translate(${miniGearRadius}px) rotate(-${angleDeg}deg)`,
                       willChange: "transform",
                     }}
-                    className="pointer-events-none z-20 drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
                   >
-                    <svg viewBox="0 0 60 60" className="size-full">
-                      {/* Teeth: amber #F59E0B */}
-                      <path d={MINI_GEAR_PATH} fill="#F59E0B" stroke="#B45309" strokeWidth="1" />
-                      {/* Body: navy #0F1B2D */}
-                      <circle cx="30" cy="30" r="19" fill="#0F1B2D" stroke="#1A365D" strokeWidth="1" />
-                      {/* Center hub: navy #1A365D */}
-                      <circle cx="30" cy="30" r="8" fill="#1A365D" stroke="#F59E0B" strokeWidth="0.8" />
-                      {/* Amber dot center */}
-                      <circle cx="30" cy="30" r="3.2" fill="#F59E0B" />
-                    </svg>
-                  </motion.div>
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ delay: 0.1 * idx, type: "spring", stiffness: 260, damping: 20 }}
+                      style={{ rotate: miniGearRotation, width: "100%", height: "100%", willChange: "transform" }}
+                    >
+                      <svg viewBox="0 0 60 60" className="size-full">
+                        <path d={MINI_GEAR_PATH} fill="#F59E0B" stroke="#B45309" strokeWidth="1" />
+                        <circle cx="30" cy="30" r="19" fill="#0F1B2D" stroke="#1A365D" strokeWidth="1" />
+                        <circle cx="30" cy="30" r="8" fill="#1A365D" stroke="#F59E0B" strokeWidth="0.8" />
+                        <circle cx="30" cy="30" r="3.2" fill="#F59E0B" />
+                      </svg>
+                    </motion.div>
+                  </div>
                 );
               })}
 
-              {/* FIX 1 & 4: 3D GEAR CONTAINER with tilt */}
               <motion.div
-                style={{
-                  rotateX: 15,
-                  rotateY: smoothTiltY,
-                  transformStyle: "preserve-3d",
-                }}
+                style={{ rotateX: 15, rotateY: smoothTiltY, transformStyle: "preserve-3d" }}
                 className="relative size-full select-none"
               >
-                {/* FIX 1 & 4: BACK LAYER - darker navy #0A1628 offset 4px down/right */}
                 <div
                   className="pointer-events-none absolute inset-0 size-full"
                   style={{ transform: "translate3d(4px, 4px, -10px) scale(1.015)" }}
@@ -724,13 +672,9 @@ export function GearDialModal({
                   </svg>
                 </div>
 
-                {/* FIX 1: MIDDLE LAYER - Main Gear Body with 3D depth */}
                 <div
                   ref={dialRef}
                   onPointerDown={handlePointerDown}
-                  onPointerMove={handlePointerMove}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
                   tabIndex={0}
                   role="slider"
                   aria-label="Media Option Dial"
@@ -743,20 +687,14 @@ export function GearDialModal({
                     transformStyle: "preserve-3d",
                     transform: "translateZ(0px)",
                     willChange: "transform",
-                    // FIX 4: Light and shadow - metallic 3D feel
-                    boxShadow:
-                      "inset 2px 2px 4px rgba(255, 255, 255, 0.1), inset -2px -2px 6px rgba(0, 0, 0, 0.5)",
+                    touchAction: "none",
+                    boxShadow: "inset 2px 2px 4px rgba(255, 255, 255, 0.1), inset -2px -2px 6px rgba(0, 0, 0, 0.5)",
                   }}
                 >
                   <motion.div
-                    style={{
-                      rotate: rotation,
-                      transformStyle: "preserve-3d",
-                      willChange: "transform",
-                    }}
+                    style={{ rotate: rotation, transformStyle: "preserve-3d", willChange: "transform" }}
                     className="relative size-full select-none"
                   >
-                    {/* FIX 1: Gear SVG - navy body #0F1B2D with amber teeth #F59E0B */}
                     <svg viewBox="0 0 340 340" className="size-full drop-shadow-[0_16px_36px_rgba(0,0,0,0.65)]">
                       <defs>
                         <radialGradient id={`gear-face-grad-${id}`} cx="50%" cy="50%" r="50%">
@@ -766,18 +704,10 @@ export function GearDialModal({
                           <stop offset="100%" stopColor="#0F1B2D" />
                         </radialGradient>
                       </defs>
-
-                      {/* Teeth: amber #F59E0B ONLY teeth, not body */}
                       <path d={MAIN_GEAR_PATH} fill="#F59E0B" stroke="#B45309" strokeWidth="1.2" />
-
-                      {/* Body: dark navy #0F1B2D circular plate */}
-                      <circle cx="170" cy="170" r="142" fill="#0F1B2D" stroke="#0F1B2D" strokeWidth="1" />
-
-                      {/* FIX 1: Inner ring darker navy #0A1628 around icons */}
+                      <circle cx="170" cy="170" r="142" fill="#0F1B2D" />
                       <circle cx="170" cy="170" r="115" fill="none" stroke="#0A1628" strokeWidth="14" strokeOpacity="0.9" />
                       <circle cx="170" cy="170" r="115" fill="none" stroke="#1A365D" strokeWidth="1" strokeOpacity="0.5" />
-
-                      {/* Milled Tick Marks */}
                       {Array.from({ length: 36 }).map((_, i) => {
                         const angle = (i * 10 * Math.PI) / 180;
                         const r1 = i % 9 === 0 ? 122 : 128;
@@ -799,37 +729,26 @@ export function GearDialModal({
                           />
                         );
                       })}
-
-                      {/* Inner Groove Track */}
-                      <circle
-                        cx="170"
-                        cy="170"
-                        r="70"
-                        fill="none"
-                        stroke="#F59E0B"
-                        strokeWidth="1"
-                        strokeDasharray="4 4"
-                        strokeOpacity="0.25"
-                      />
-
-                      {/* FIX 1: Center hub - navy #1A365D with amber ring */}
+                      <circle cx="170" cy="170" r="70" fill="none" stroke="#F59E0B" strokeWidth="1" strokeDasharray="4 4" strokeOpacity="0.25" />
                       <circle cx="170" cy="170" r="48" fill="#F59E0B" stroke="#B45309" strokeWidth="1.5" />
                       <circle cx="170" cy="170" r="38" fill="#1A365D" stroke="#0F1B2D" strokeWidth="1.5" />
                       <circle cx="170" cy="170" r="36" fill={`url(#gear-face-grad-${id})`} />
-
-                      {/* Hub Rivets */}
                       {Array.from({ length: 6 }).map((_, i) => {
-                        const boltAngle = (i * 60 * Math.PI) / 180;
-                        const bx = 170 + 41 * Math.cos(boltAngle);
-                        const by = 170 + 41 * Math.sin(boltAngle);
-                        return <circle key={i} cx={bx} cy={by} r="2.5" fill="#FCD34D" stroke="#78350F" strokeWidth="0.8" />;
+                        const a = (i * 60 * Math.PI) / 180;
+                        return <circle key={i} cx={170 + 41 * Math.cos(a)} cy={170 + 41 * Math.sin(a)} r="2.5" fill="#FCD34D" stroke="#78350F" strokeWidth="0.8" />;
                       })}
                     </svg>
 
-                    {/* Center Jewel */}
+                    {/* PROBLEM 1: Center hub perfectly centered 50%/50% */}
                     <div
-                      className="pointer-events-none absolute inset-0 grid place-items-center"
-                      style={{ transform: "translateZ(14px)" }}
+                      className="pointer-events-none absolute"
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%) translateZ(14px)",
+                        willChange: "transform",
+                      }}
                     >
                       <div
                         className="grid size-12 place-items-center rounded-full border border-amber-500/40 bg-gradient-to-br from-[#F59E0B] to-[#B45309] shadow-inner"
@@ -839,7 +758,6 @@ export function GearDialModal({
                       </div>
                     </div>
 
-                    {/* FIX 2: Option Badges with own colors */}
                     {options.map((opt, idx) => {
                       const rad = ((opt.baseAngle - 90) * Math.PI) / 180;
                       const r = 104;
@@ -847,11 +765,9 @@ export function GearDialModal({
                       const leftPos = 170 + r * Math.cos(rad);
                       const isActive = idx === activeIndex;
                       const OptIcon = opt.icon;
-
                       return (
                         <div
                           key={opt.id}
-                          onPointerDown={(e) => e.stopPropagation()}
                           onClick={(e) => {
                             e.stopPropagation();
                             rotateToOption(idx);
@@ -870,20 +786,39 @@ export function GearDialModal({
                             className="flex flex-col items-center justify-center"
                             style={{ rotate: counterRotation }}
                           >
-                            {/* Badge circle 56px with own color, white icon */}
-                            <span
-                              className={cn(
-                                "grid size-14 place-items-center rounded-full shadow-lg transition-all duration-300 border-2",
-                                !opt.available && "opacity-40 grayscale",
+                            {/* BONUS: Breathing light effect */}
+                            <div className="relative">
+                              {isActive && (
+                                <motion.div
+                                  className="absolute rounded-full pointer-events-none"
+                                  style={{
+                                    top: "50%",
+                                    left: "50%",
+                                    width: "64px",
+                                    height: "64px",
+                                    border: `2px solid ${opt.badgeBg}`,
+                                    boxShadow: `0 0 16px ${opt.badgeBg}`,
+                                    x: "-50%",
+                                    y: "-50%",
+                                  }}
+                                  animate={{ scale: [1, 1.1, 1], opacity: [0.4, 0.8, 0.4] }}
+                                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                />
                               )}
-                              style={{
-                                background: opt.badgeBg,
-                                borderColor: isActive ? "#FFFFFF" : "rgba(255,255,255,0.15)",
-                                boxShadow: isActive ? opt.badgeGlow : "0 4px 12px rgba(0,0,0,0.4)",
-                              }}
-                            >
-                              <OptIcon className="size-6 text-white" />
-                            </span>
+                              <span
+                                className={cn(
+                                  "relative grid size-14 place-items-center rounded-full shadow-lg transition-all duration-300 border-2",
+                                  !opt.available && "opacity-40 grayscale",
+                                )}
+                                style={{
+                                  background: opt.badgeBg,
+                                  borderColor: isActive ? "#FFFFFF" : "rgba(255,255,255,0.15)",
+                                  boxShadow: isActive ? opt.badgeGlow : "0 4px 12px rgba(0,0,0,0.4)",
+                                }}
+                              >
+                                <OptIcon className="size-6 text-white" />
+                              </span>
+                            </div>
                             <span
                               className={cn(
                                 "mt-1.5 font-serif text-[10px] font-bold tracking-wider uppercase transition-colors duration-300",
@@ -901,7 +836,6 @@ export function GearDialModal({
                 </div>
               </motion.div>
 
-              {/* FIX 5: LIGHT PARTICLES CANVAS */}
               <canvas
                 ref={canvasRef}
                 width={isMobile ? 260 : 340}
@@ -911,7 +845,6 @@ export function GearDialModal({
               />
             </div>
 
-            {/* FIX 7: Selected Label with color */}
             <div className="flex items-center gap-3 mt-6 sm:mt-7 shrink-0 z-30">
               <button
                 type="button"
@@ -943,9 +876,10 @@ export function GearDialModal({
               </button>
             </div>
 
-            {/* FIX 8: Action Card & Button with selected color */}
-            <div className="mt-3.5 w-full rounded-2xl border bg-[#0F1B2D] p-4 shadow-xl backdrop-blur-xl shrink-0 transition-colors duration-300"
-                 style={{ borderColor: `${activeOption.labelColor}30` }}>
+            <div
+              className="mt-3.5 w-full rounded-2xl border bg-[#0F1B2D] p-4 shadow-xl backdrop-blur-xl shrink-0 transition-colors duration-300"
+              style={{ borderColor: `${activeOption.labelColor}30` }}
+            >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span
