@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  Rewind,
+  FastForward,
   Play,
   Pause,
   Square,
-  RotateCcw,
-  RotateCw,
   Volume2,
   VolumeX,
   X,
@@ -71,6 +72,9 @@ function formatTime(seconds: number): string {
 export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const progressLineRef = useRef<HTMLDivElement | null>(null);
+  const playButtonRef = useRef<HTMLButtonElement | null>(null);
+  const miniButtonRef = useRef<HTMLButtonElement | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -81,6 +85,30 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
   const [volumeSliderOpen, setVolumeSliderOpen] = useState(false);
   const [isDraggingKnob, setIsDraggingKnob] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [supportsBackdrop, setSupportsBackdrop] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const [rewindClicked, setRewindClicked] = useState(false);
+  const [forwardClicked, setForwardClicked] = useState(false);
+
+  // Mount and browser capabilities detection
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== "undefined") {
+      const supported =
+        (window.CSS &&
+          (CSS.supports("backdrop-filter", "blur(1px)") ||
+            CSS.supports("-webkit-backdrop-filter", "blur(1px)"))) ??
+        true;
+      setSupportsBackdrop(supported);
+      setIsMobile(window.innerWidth < 640);
+
+      const handleResize = () => setIsMobile(window.innerWidth < 640);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }
+  }, []);
 
   // Check reduced motion preference
   useEffect(() => {
@@ -117,6 +145,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     }
     setCurrentTime(0);
     setIsMinimized(false);
+    setAnnouncement("Audio player opened");
 
     const audio = audioRef.current;
     if (audio) {
@@ -132,6 +161,18 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
       }
     }
   }, [track, playbackRate, isMuted, volume]);
+
+  // Focus management: focus play button when cassette appears
+  useEffect(() => {
+    if (!isMinimized && track) {
+      const timer = setTimeout(() => {
+        playButtonRef.current?.focus();
+      }, 150);
+      return () => clearTimeout(timer);
+    } else if (isMinimized) {
+      miniButtonRef.current?.focus();
+    }
+  }, [isMinimized, track]);
 
   // Audio element listeners
   const handleTimeUpdate = () => {
@@ -180,18 +221,40 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     setIsPlaying(false);
   }, []);
 
-  // Seek +/- 10s
+  // Seek +/- 10s with edge handling
   const seekDelta = useCallback(
     (deltaSeconds: number) => {
       const audio = audioRef.current;
       if (!audio) return;
       playMechanicalClick();
-      const target = Math.max(0, Math.min(duration || 100, audio.currentTime + deltaSeconds));
+
+      let target: number;
+      if (deltaSeconds < 0) {
+        // Rewind: if current time < 10s, go to 0:00
+        target = Math.max(0, audio.currentTime + deltaSeconds);
+      } else {
+        // Forward: if near end, go to end
+        const total = duration || 100;
+        target = Math.min(total, audio.currentTime + deltaSeconds);
+      }
+
       audio.currentTime = target;
       setCurrentTime(target);
     },
     [duration],
   );
+
+  const handleRewindClick = useCallback(() => {
+    setRewindClicked(true);
+    setTimeout(() => setRewindClicked(false), 250);
+    seekDelta(-10);
+  }, [seekDelta]);
+
+  const handleForwardClick = useCallback(() => {
+    setForwardClicked(true);
+    setTimeout(() => setForwardClicked(false), 250);
+    seekDelta(10);
+  }, [seekDelta]);
 
   // Speed cycle: 0.75x -> 1x -> 1.25x -> 1.5x -> 2x -> 0.75x
   const cycleSpeed = useCallback(() => {
@@ -231,7 +294,11 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
     }
   };
 
-  // Keyboard controls (Space = Play/Pause, Left = -10s, Right = +10s, Esc = Close)
+  // Keyboard controls:
+  // Space = Play/Pause
+  // Left arrow = back 10s
+  // Right arrow = forward 10s
+  // Esc = Minimize (same as clicking outside)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!track) return;
@@ -242,20 +309,25 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
         togglePlay();
       } else if (e.code === "ArrowLeft") {
         e.preventDefault();
-        seekDelta(-10);
+        handleRewindClick();
       } else if (e.code === "ArrowRight") {
         e.preventDefault();
-        seekDelta(10);
+        handleForwardClick();
       } else if (e.code === "Escape") {
         e.preventDefault();
-        if (volumeSliderOpen) setVolumeSliderOpen(false);
-        else onClose();
+        if (volumeSliderOpen) {
+          setVolumeSliderOpen(false);
+        } else {
+          // Esc minimizes the cassette (as instructed in PART 2-4)
+          playMechanicalClick();
+          setIsMinimized(true);
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [track, togglePlay, seekDelta, volumeSliderOpen, onClose]);
+  }, [track, togglePlay, handleRewindClick, handleForwardClick, volumeSliderOpen]);
 
   // Draggable Magnetic Tape Progress Knob
   const updateProgressFromPointer = useCallback(
@@ -299,13 +371,71 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
   const progressPercent = progressRatio * 100;
 
   // Reel tape ring extra radius percentage:
-  // Left starts thick (24% extra) and shrinks to 6%
-  // Right starts thin (6% extra) and grows to 24%
   const leftTapeExtra = 24 - 18 * progressRatio;
   const rightTapeExtra = 6 + 18 * progressRatio;
 
   // Reel spin duration (3s at 1x speed, scaled by playback rate)
   const spinDuration = 3 / Math.max(0.25, playbackRate);
+
+  // Portal content for the full-screen cinematic blur overlay
+  const overlayPortal =
+    mounted &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <AnimatePresence>
+        {!isMinimized && track ? (
+          <motion.div
+            key="cassette-cinematic-blur-overlay"
+            role="presentation"
+            aria-hidden="true"
+            onClick={() => {
+              // PART 2-1: Clicking outside minimizes the cassette, does not close it
+              playMechanicalClick();
+              setIsMinimized(true);
+            }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReduced ? 0 : 0.3 }}
+            className="fixed inset-0 z-40 cursor-pointer overflow-hidden transition-[backdrop-filter,background-color] duration-300"
+            style={{
+              backgroundColor: supportsBackdrop
+                ? "rgba(10, 22, 40, 0.4)"
+                : "rgba(10, 22, 40, 0.75)",
+              backdropFilter: supportsBackdrop
+                ? isMobile
+                  ? "blur(8px) saturate(0.8)"
+                  : "blur(12px) saturate(0.8)"
+                : undefined,
+              WebkitBackdropFilter: supportsBackdrop
+                ? isMobile
+                  ? "blur(8px) saturate(0.8)"
+                  : "blur(12px) saturate(0.8)"
+                : undefined,
+              willChange: "backdrop-filter",
+            }}
+          >
+            {/* PART 4-1: Spotlight Effect - soft cream/white glow behind cassette */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.08), transparent 70%)",
+              }}
+            />
+
+            {/* PART 4-2: Edge Vignette - subtle dark vignette around screen edges */}
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                boxShadow: "inset 0 0 200px rgba(0, 0, 0, 0.3)",
+              }}
+            />
+          </motion.div>
+        ) : null}
+      </AnimatePresence>,
+      document.body,
+    );
 
   return (
     <>
@@ -321,7 +451,12 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
         preload="auto"
       />
 
-      {/* Embedded CSS for authentic continuous spin and play pulse */}
+      {/* Screen reader live region */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </div>
+
+      {/* Embedded CSS for authentic continuous spin, play pulse, and button press */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -330,17 +465,26 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             to { transform: rotate(360deg); }
           }
           @keyframes cassette-play-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(90, 103, 216, 0.45), inset 0 -2px 0 rgba(0,0,0,0.25); }
-            50% { box-shadow: 0 0 0 6px rgba(90, 103, 216, 0.1), inset 0 -2px 0 rgba(0,0,0,0.25); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(90, 103, 216, 0.5), inset 0 -2px 0 rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(90, 103, 216, 0.12), inset 0 -2px 0 rgba(0,0,0,0.25); }
+          }
+          @keyframes skip-click-pulse {
+            0% { transform: scale(0.92); }
+            50% { transform: scale(1.04); }
+            100% { transform: scale(1); }
           }
         `,
         }}
       />
 
-      {/* Floating Minimized Badge */}
+      {/* CHANGE 2: THE FULL-SCREEN BLUR OVERLAY PORTAL */}
+      {overlayPortal}
+
+      {/* Floating Minimized Badge (PART 2-1: 48x48px with pulsing playing indicator) */}
       <AnimatePresence>
         {isMinimized ? (
           <motion.button
+            ref={miniButtonRef}
             key="minimized-cassette"
             onClick={() => {
               playMechanicalClick();
@@ -352,10 +496,13 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             aria-label="Expand cassette audio player"
+            title="Expand cassette player"
             className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[#1A365D]/30 bg-[#F5EFE6] px-3.5 py-2 shadow-[0_12px_28px_rgba(26,54,93,0.3)] backdrop-blur transition-all cursor-pointer"
           >
             <div
-              className="relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-white"
+              className={`relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-white transition-all ${
+                isPlaying ? "ring-2 ring-[#5A67D8] ring-offset-1 animate-pulse" : ""
+              }`}
               style={{
                 animation:
                   isPlaying && !prefersReduced
@@ -377,21 +524,30 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
         ) : null}
       </AnimatePresence>
 
-      {/* STEP 4 & 5: CASSETTE PLAYER (AUTHENTIC SVG BASE + INTERACTIVE OVERLAYS) */}
+      {/* THE CASSETTE PLAYER (STAYS SHARP, Z-INDEX 50, STRONGER SHADOW) */}
       <AnimatePresence>
         {!isMinimized ? (
           <motion.div
             key="retro-cassette-modal"
-            role="region"
-            aria-label="Retro cassette audio player"
+            role="dialog"
+            aria-label="Audio player"
+            aria-modal="true"
             initial={{ y: 120, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 120, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20, duration: 0.4 }}
+            transition={{
+              type: "spring",
+              stiffness: 260,
+              damping: 20,
+              duration: prefersReduced ? 0 : 0.4,
+            }}
             className="fixed bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 z-50 w-[90vw] sm:w-[420px] select-none touch-none flex flex-col items-center gap-2"
+            style={{
+              filter: "drop-shadow(0 40px 80px rgba(0, 0, 0, 0.5))",
+            }}
           >
-            {/* STEP 2: THE REAL PRE-MADE SVG CASSETTE TAPE CONTAINER */}
-            <div className="relative w-full aspect-[626/405] drop-shadow-[0_20px_40px_rgba(0,0,0,0.38)]">
+            {/* THE REAL PRE-MADE SVG CASSETTE TAPE CONTAINER */}
+            <div className="relative w-full aspect-[626/405] drop-shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
               {/* REAL CASSETTE SVG: provides plastic shell, label, window, screws, notches */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -400,8 +556,9 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 className="w-full h-full object-contain pointer-events-none select-none"
               />
 
-              {/* STEP 3-F: WINDOW CONTROLS (Minimize & Close buttons) */}
+              {/* WINDOW CONTROLS: Close (X) & Minimize (—) */}
               <div className="absolute top-[3%] right-[3%] z-30 flex items-center gap-1">
+                {/* Minimize Button */}
                 <button
                   type="button"
                   onClick={() => {
@@ -410,25 +567,28 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                   aria-label="Minimize cassette player"
                   title="Minimize"
-                  className="grid size-5 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-slate-800/20 hover:text-black transition-all cursor-pointer"
+                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-slate-800/20 hover:text-black transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
                 >
                   <Minus className="size-3" />
                 </button>
+
+                {/* Close Button: closes completely & stops audio */}
                 <button
                   type="button"
                   onClick={() => {
                     playMechanicalClick();
+                    stopPlayback();
                     onClose();
                   }}
                   aria-label="Close audio player"
                   title="Close"
-                  className="grid size-5 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-red-500 hover:text-white transition-all cursor-pointer"
+                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-red-500 hover:text-white transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   <X className="size-3" />
                 </button>
               </div>
 
-              {/* STEP 3-A: TEXT OVERLAY ON LABEL (top: 13.5%, left: 8.5%) */}
+              {/* TEXT OVERLAY ON LABEL (top: 13.5%, left: 8.5%) */}
               <div
                 className="absolute pointer-events-none flex items-start justify-between"
                 style={{
@@ -437,7 +597,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   width: "83%",
                 }}
               >
-                {/* Left: Book Title & Unit (cleanly aligned with vintage label lines), Institute */}
+                {/* Left: Book Title & Unit, Institute */}
                 <div className="flex flex-col min-w-0 pr-2">
                   <h3 className="font-serif text-[12px] sm:text-[14px] font-bold text-[#1A365D] leading-none tracking-tight">
                     {track.bookTitle || "Interchange 1"}
@@ -461,7 +621,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 </div>
               </div>
 
-              {/* STEP 3-B & 3-C: LEFT REEL OVERLAY (inside SVG window, rotates during playback) */}
+              {/* LEFT REEL OVERLAY (inside SVG window, rotates during playback) */}
               <div
                 className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
                 style={{
@@ -483,7 +643,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                 />
 
-                {/* 6-Spoke Reel Hub SVG (rotates continuously during playback) */}
+                {/* 6-Spoke Reel Hub SVG */}
                 <svg
                   viewBox="-40 -40 80 80"
                   className="relative z-10 w-full h-full drop-shadow-sm overflow-visible"
@@ -494,11 +654,10 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                         : "none",
                   }}
                 >
-                  {/* Outer reel hub ring */}
                   <circle cx="0" cy="0" r="32" fill="#E8E8E8" stroke="#CBD5E1" strokeWidth="1.5" />
                   <circle cx="0" cy="0" r="26" fill="#F8FAFC" stroke="#E2E8F0" strokeWidth="1" />
 
-                  {/* Six Spokes (lines from center to edge, 60 degrees apart) */}
+                  {/* Six Spokes */}
                   {[0, 60, 120, 180, 240, 300].map((deg) => {
                     const rad = (deg * Math.PI) / 180;
                     return (
@@ -515,7 +674,6 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                     );
                   })}
 
-                  {/* Center hole: 8px diameter, dark */}
                   <circle cx="0" cy="0" r="6" fill="#0A1628" stroke="#334155" strokeWidth="1" />
 
                   {/* Drive spindle teeth */}
@@ -534,7 +692,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 </svg>
               </div>
 
-              {/* STEP 3-B & 3-C: RIGHT REEL OVERLAY (inside SVG window, rotates during playback) */}
+              {/* RIGHT REEL OVERLAY (inside SVG window, rotates during playback) */}
               <div
                 className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
                 style={{
@@ -556,7 +714,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                 />
 
-                {/* 6-Spoke Reel Hub SVG (rotates continuously during playback) */}
+                {/* 6-Spoke Reel Hub SVG */}
                 <svg
                   viewBox="-40 -40 80 80"
                   className="relative z-10 w-full h-full drop-shadow-sm overflow-visible"
@@ -567,11 +725,10 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                         : "none",
                   }}
                 >
-                  {/* Outer reel hub ring */}
                   <circle cx="0" cy="0" r="32" fill="#E8E8E8" stroke="#CBD5E1" strokeWidth="1.5" />
                   <circle cx="0" cy="0" r="26" fill="#F8FAFC" stroke="#E2E8F0" strokeWidth="1" />
 
-                  {/* Six Spokes (lines from center to edge, 60 degrees apart) */}
+                  {/* Six Spokes */}
                   {[0, 60, 120, 180, 240, 300].map((deg) => {
                     const rad = (deg * Math.PI) / 180;
                     return (
@@ -588,7 +745,6 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                     );
                   })}
 
-                  {/* Center hole: 8px diameter, dark */}
                   <circle cx="0" cy="0" r="6" fill="#0A1628" stroke="#334155" strokeWidth="1" />
 
                   {/* Drive spindle teeth */}
@@ -607,7 +763,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 </svg>
               </div>
 
-              {/* STEP 3-E: MAGNETIC TAPE PROGRESS BAR (thin 4px horizontal line below reels) */}
+              {/* MAGNETIC TAPE PROGRESS BAR (thin 4px horizontal line below reels) */}
               <div
                 ref={progressLineRef}
                 onPointerDown={handlePointerDown}
@@ -640,21 +796,28 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
               </div>
             </div>
 
-            {/* STEP 3-D: BUTTONS DECK (row of 6 buttons matching the cassette beige shell) */}
+            {/* CHANGE 1: CONTROLS DECK WITH STANDARD SKIP ARROWS (REWIND & FASTFORWARD) */}
             <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full px-3 py-2 rounded-xl bg-[#E7DECE] border border-[#B8AB96] shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
-              {/* 1. Rewind (-10s) */}
+              {/* 1. Skip Back 10s (Rewind icon: two triangles pointing left) */}
               <button
                 type="button"
-                onClick={() => seekDelta(-10)}
-                aria-label="Rewind 10 seconds"
-                title="Rewind 10s (Left Arrow)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                onClick={handleRewindClick}
+                aria-label="Back 10s"
+                title="Back 10s"
+                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white ${
+                  rewindClicked ? "scale-90 bg-indigo-50 border-indigo-400" : ""
+                }`}
               >
-                <RotateCcw className="size-4 sm:size-5" />
+                <Rewind className="size-5 fill-current" />
+                {/* Visual Tooltip */}
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap">
+                  Back 10s
+                </span>
               </button>
 
               {/* 2. Play / Pause (LARGER, active indigo #5A67D8 background with white icon) */}
               <button
+                ref={playButtonRef}
                 type="button"
                 onClick={togglePlay}
                 aria-label={isPlaying ? "Pause audio" : "Play audio"}
@@ -687,15 +850,21 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 <Square className="size-4 sm:size-5 fill-current" />
               </button>
 
-              {/* 4. Forward (+10s) */}
+              {/* 4. Skip Forward 10s (FastForward icon: two triangles pointing right) */}
               <button
                 type="button"
-                onClick={() => seekDelta(10)}
-                aria-label="Fast forward 10 seconds"
-                title="Forward 10s (Right Arrow)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                onClick={handleForwardClick}
+                aria-label="Forward 10s"
+                title="Forward 10s"
+                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white ${
+                  forwardClicked ? "scale-90 bg-indigo-50 border-indigo-400" : ""
+                }`}
               >
-                <RotateCw className="size-4 sm:size-5" />
+                <FastForward className="size-5 fill-current" />
+                {/* Visual Tooltip */}
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap">
+                  Forward 10s
+                </span>
               </button>
 
               {/* 5. Speed (1x) */}
