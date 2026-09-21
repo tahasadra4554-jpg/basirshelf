@@ -111,7 +111,7 @@ export function UnitMedia({
                   href={audioUrl as string}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-text underline-offset-4 transition-colors duration-300 hover:underline dark:text-indigo"
+                  className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#FBBF24] underline-offset-4 transition-colors duration-200 hover:text-[#FCD34D] hover:underline"
                 >
                   Open audio in a new tab
                   <ExternalLink className="size-3.5" aria-hidden="true" />
@@ -140,7 +140,7 @@ export function UnitMedia({
                     href={imageUrl as string}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-text underline-offset-4 transition-colors duration-300 hover:underline dark:text-indigo"
+                    className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#FBBF24] underline-offset-4 transition-colors duration-200 hover:text-[#FCD34D] hover:underline"
                   >
                     Open image in a new tab
                     <ExternalLink className="size-3.5" aria-hidden="true" />

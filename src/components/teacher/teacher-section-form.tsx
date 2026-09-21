@@ -130,7 +130,7 @@ export function TeacherSectionForm({
           <Label htmlFor="section-audio-url">Audio URL (optional)</Label>
           <label
             className={
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors duration-300 hover:border-indigo/50 hover:text-indigo-text dark:hover:text-indigo" +
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
               (uploadingAudio ? " pointer-events-none opacity-60" : "")
             }
           >
@@ -174,7 +174,7 @@ export function TeacherSectionForm({
           <Label htmlFor="section-images-url">Images URL (optional, comma-separated)</Label>
           <label
             className={
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors duration-300 hover:border-indigo/50 hover:text-indigo-text dark:hover:text-indigo" +
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
               (uploadingImage ? " pointer-events-none opacity-60" : "")
             }
           >
@@ -220,7 +220,7 @@ export function TeacherSectionForm({
           <Label htmlFor="section-handout-url">Handout PDF (optional)</Label>
           <label
             className={
-              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors duration-300 hover:border-indigo/50 hover:text-indigo-text dark:hover:text-indigo" +
+              "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
               (uploadingHandout ? " pointer-events-none opacity-60" : "")
             }
           >

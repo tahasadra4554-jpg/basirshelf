@@ -25,28 +25,29 @@ function apply(mode: Mode): void {
 }
 
 /**
- * Light / dark / system. The pre-hydration script in app/layout.tsx applies the
- * stored choice before first paint, so there is no flash of the wrong theme.
+ * Light / dark / system.
+ * Dark mode is the DEFAULT for BasirShelf.
  */
 export function ThemeToggle() {
-  const [mode, setMode] = useState<Mode>("light");
+  const [mode, setMode] = useState<Mode>("dark");
 
   useEffect(() => {
-    let stored: Mode = "system";
+    let stored: Mode = "dark";
     try {
       const value = window.localStorage.getItem(STORAGE_KEY);
       if (value === "light" || value === "dark" || value === "system") {
         stored = value;
       }
     } catch {
-      /* storage blocked — fall back to the system preference */
+      /* storage blocked — default to dark mode */
+      stored = "dark";
     }
     setMode(stored);
     apply(stored);
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => {
-      if ((window.localStorage.getItem(STORAGE_KEY) ?? "system") === "system") {
+      if ((window.localStorage.getItem(STORAGE_KEY) ?? "dark") === "system") {
         apply("system");
       }
     };
@@ -68,7 +69,7 @@ export function ThemeToggle() {
     <div
       role="group"
       aria-label="Colour theme"
-      className="flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 shadow-soft"
+      className="flex items-center gap-0.5 rounded-full border border-amber-500/30 bg-card p-0.5 shadow-soft"
     >
       {OPTIONS.map(({ id, label, Icon }) => (
         <button
@@ -81,11 +82,11 @@ export function ThemeToggle() {
             "grid size-8 place-items-center rounded-full transition-all duration-300",
             "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             mode === id
-              ? "bg-navy text-navy-foreground shadow-soft"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+              ? "bg-[#1A365D] text-[#FCD34D] shadow-[0_0_12px_rgba(245,158,11,0.25)] border border-amber-500/40"
+              : "text-muted-foreground hover:bg-amber-500/10 hover:text-[#FCD34D]",
           )}
         >
-          <Icon className="size-4" aria-hidden="true" />
+          <Icon className="size-4 text-inherit" aria-hidden="true" />
           <span className="sr-only">{label} theme</span>
         </button>
       ))}

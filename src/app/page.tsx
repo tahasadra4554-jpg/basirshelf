@@ -36,7 +36,7 @@ export default async function HomePage() {
         <Container className="pt-8">
           <div
             role="status"
-            className="flex items-start gap-3 rounded-2xl border border-border bg-card px-5 py-4 text-sm shadow-soft"
+            className="flex items-start gap-3 rounded-2xl border border-destructive/40 bg-card px-5 py-4 text-sm shadow-soft text-foreground"
           >
             <TriangleAlert
               className="mt-0.5 size-4 shrink-0 text-destructive"
@@ -65,8 +65,8 @@ export default async function HomePage() {
         </Container>
       ) : usesSupabase() ? (
         <Container className="pt-8">
-          <p className="inline-flex items-center gap-1.5 rounded-full border border-success/35 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
-            <Database className="size-3.5" aria-hidden="true" />
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3.5 py-1 text-xs font-semibold text-[#92400E] dark:text-[#FBBF24]">
+            <Database className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
             Live catalogue from Supabase
           </p>
         </Container>
@@ -74,12 +74,13 @@ export default async function HomePage() {
 
       <Container className="scroll-mt-24 py-14 sm:py-20" id="books">
         <div className="mb-10 max-w-2xl">
-          <p className="eyebrow text-indigo-text dark:text-indigo">
+          <p className="eyebrow text-[#B45309] dark:text-[#FBBF24]">
             Course library
           </p>
-          <h2 className="mt-4 font-serif text-3xl font-semibold tracking-tight text-navy text-balance sm:text-4xl">
+          <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#1A365D] dark:text-[#FCD34D] text-balance sm:text-4xl">
             Three books, one clear path
           </h2>
+          <div className="amber-rule" />
           <p className="mt-4 text-sm leading-8 text-muted-foreground text-pretty sm:text-base">
             Start with Interchange 1 and move up as you are ready. Open any book
             to see every unit, its video lesson and its PDF handout.
@@ -89,7 +90,7 @@ export default async function HomePage() {
         {loadError ? (
           <div
             role="alert"
-            className="mx-auto max-w-md rounded-2xl border border-destructive/40 bg-destructive/5 p-6 text-center"
+            className="mx-auto max-w-md rounded-2xl border border-destructive/40 bg-card p-6 text-center"
           >
             <h3 className="font-serif text-lg font-semibold text-destructive">
               The books could not be loaded

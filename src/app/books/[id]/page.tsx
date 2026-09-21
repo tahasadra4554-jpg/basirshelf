@@ -33,7 +33,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       type: "article",
       siteName: "BasirShelf",
       locale: "en_US",
-      // A branded card rendered per book: cover, title, level, unit count.
       images: [
         {
           url: `/books/${encodeURIComponent(book.id)}/opengraph-image`,
@@ -70,23 +69,21 @@ export default async function BookDetailPage({ params }: Params) {
       section.image_url ||
       section.audio_url,
   );
-  // Only link to a unit panel that actually exists — the media panel renders
-  // for units that already carry a video, an audio lesson or an image.
   const playableUnit =
     book.sections.find(
       (section) => section.video_url || section.audio_url || section.image_url,
     ) ?? null;
 
   return (
-    <>
+    <div className="bg-background min-h-screen text-foreground">
       {/* Editorial header */}
-      <div className="relative overflow-hidden border-b border-border">
+      <div className="relative overflow-hidden border-b border-amber-500/20">
         <div
           className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
           aria-hidden="true"
         >
-          <div className="absolute inset-0 bg-[radial-gradient(110%_80%_at_10%_0%,#ffffff_0%,#f6f2e9_52%,#efe9dd_100%)] dark:bg-[radial-gradient(110%_80%_at_10%_0%,#1a2440_0%,#101828_55%,#0b1120_100%)]" />
-          <div className="bg-grid mask-fade-b absolute inset-0 opacity-50" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.12),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(245,158,11,0.08),transparent_60%),#FDFBF7] dark:bg-[radial-gradient(ellipse_at_top_left,rgba(245,158,11,0.1),transparent_60%),radial-gradient(ellipse_at_bottom_right,rgba(245,158,11,0.08),transparent_60%),#0A1628]" />
+          <div className="bg-grid mask-fade-b absolute inset-0 opacity-40" />
         </div>
 
         <Container className="py-10 sm:py-14">
@@ -95,7 +92,7 @@ export default async function BookDetailPage({ params }: Params) {
               <li>
                 <Link
                   href="/"
-                  className="transition-colors duration-300 hover:text-foreground"
+                  className="transition-colors duration-200 hover:text-foreground"
                 >
                   Home
                 </Link>
@@ -104,7 +101,7 @@ export default async function BookDetailPage({ params }: Params) {
               <li>
                 <Link
                   href="/#books"
-                  className="transition-colors duration-300 hover:text-foreground"
+                  className="transition-colors duration-200 hover:text-foreground"
                 >
                   Library
                 </Link>
@@ -120,7 +117,7 @@ export default async function BookDetailPage({ params }: Params) {
             <div className="md:col-span-1 flex justify-start">
               <div
                 data-testid="book-detail-cover"
-                className="relative aspect-[3/4] w-[60%] min-w-[180px] max-w-xs md:w-full md:max-w-sm mr-auto overflow-hidden rounded-2xl border border-border shadow-float"
+                className="relative aspect-[3/4] w-[60%] min-w-[180px] max-w-xs md:w-full md:max-w-sm mr-auto overflow-hidden rounded-2xl border border-amber-500/30 shadow-float"
               >
                 <BookCover
                   title={book.title}
@@ -133,52 +130,54 @@ export default async function BookDetailPage({ params }: Params) {
 
             <div className="min-w-0 md:col-span-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-navy px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-navy-foreground uppercase">
+                <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-[#92400E] dark:text-[#FBBF24] uppercase">
                   Interchange Series
                 </span>
                 {level ? (
-                  <span className="rounded-full border border-border bg-card px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                  <span className="rounded-full border border-amber-500/30 bg-card px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                     {level}
                   </span>
                 ) : null}
-                <span className="num-latin inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-semibold text-foreground">
-                  <Layers className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+                <span className="num-latin inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-card px-3 py-1 text-[11px] font-semibold text-foreground">
+                  <Layers className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
                   {book.sections.length} units
                 </span>
                 {ready.length > 0 ? (
-                  <span className="num-latin inline-flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1 text-[11px] font-semibold text-success">
-                    <PlayCircle className="size-3.5" aria-hidden="true" />
+                  <span className="num-latin inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-[#92400E] dark:text-[#FBBF24]">
+                    <PlayCircle className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
                     {ready.length} ready to study
                   </span>
                 ) : null}
               </div>
 
-              <h1 className="mt-4 font-serif text-3xl leading-tight font-semibold tracking-tight text-navy text-balance sm:text-4xl lg:text-5xl">
+              {/* Book title */}
+              <h1 className="mt-4 font-serif text-3xl leading-tight font-semibold tracking-tight text-foreground text-balance sm:text-4xl lg:text-5xl">
                 {book.title}
               </h1>
 
-              <p className="mt-5 max-w-2xl text-sm leading-8 text-muted-foreground text-pretty sm:text-base">
+              {/* Description */}
+              <p className="mt-5 max-w-2xl text-sm leading-8 text-foreground/85 text-pretty sm:text-base">
                 {book.description ?? "No description yet."}
               </p>
 
               <dl className="mt-8 flex flex-wrap gap-x-10 gap-y-4 text-sm">
                 <div>
-                  <dt className="eyebrow text-muted-foreground">On the shelf since</dt>
+                  <dt className="eyebrow text-[#B45309] dark:text-[#FBBF24]">On the shelf since</dt>
                   <dd className="mt-1.5 font-semibold text-foreground">
                     {formatDate(book.created_at)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="eyebrow text-muted-foreground">Institute</dt>
+                  <dt className="eyebrow text-[#B45309] dark:text-[#FBBF24]">Institute</dt>
                   <dd className="mt-1.5 font-semibold text-foreground">
                     Basir Language Institute
                   </dd>
                 </div>
                 <div>
-                  <dt className="eyebrow text-muted-foreground">Handouts</dt>
+                  <dt className="eyebrow text-[#B45309] dark:text-[#FBBF24]">Handouts</dt>
                   <dd className="mt-1.5 inline-flex items-center gap-1.5 font-semibold text-foreground">
                     <FileText
-                      className="size-3.5 text-indigo-text dark:text-indigo"
+                      className="size-3.5 text-[#F59E0B]"
                       aria-hidden="true"
                     />
                     PDF, offline-ready
@@ -190,18 +189,18 @@ export default async function BookDetailPage({ params }: Params) {
                 {playableUnit ? (
                   <a
                     href={`#unit-${playableUnit.id}-panel`}
-                    className="inline-flex items-center gap-2 rounded-full bg-navy px-5 py-3 text-sm font-semibold text-navy-foreground shadow-soft transition-all duration-300 hover:bg-navy/90 hover:shadow-float"
+                    className="btn-amber-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
                   >
                     Start with {playableUnit.title}
-                    <ArrowRight className="size-4" aria-hidden="true" />
+                    <ArrowRight className="size-4 text-[#0A1628]" aria-hidden="true" />
                   </a>
                 ) : (
                   <a
                     href="#units"
-                    className="inline-flex items-center gap-2 rounded-full bg-navy px-5 py-3 text-sm font-semibold text-navy-foreground shadow-soft transition-all duration-300 hover:bg-navy/90 hover:shadow-float"
+                    className="btn-amber-primary inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm"
                   >
                     Browse all {book.sections.length} units
-                    <ArrowRight className="size-4" aria-hidden="true" />
+                    <ArrowRight className="size-4 text-[#0A1628]" aria-hidden="true" />
                   </a>
                 )}
               </div>
@@ -217,24 +216,25 @@ export default async function BookDetailPage({ params }: Params) {
           className="mb-8 flex scroll-mt-32 flex-wrap items-end justify-between gap-3"
         >
           <div className="max-w-2xl">
-            <h2 className="font-serif text-2xl font-semibold tracking-tight text-navy sm:text-3xl">
+            <h2 className="font-serif text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               Units
             </h2>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+            <div className="amber-rule" />
+            <p className="mt-3 text-sm leading-7 text-muted-foreground">
               Listed in course order. Tap the gear dial on any unit to spin and select your lesson media.
             </p>
           </div>
           <Link
             href="/#books"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-text underline-offset-4 transition-colors duration-300 hover:underline dark:text-indigo"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#D97706] dark:text-[#FBBF24] transition-colors duration-200 hover:text-[#B45309] dark:hover:text-[#FCD34D] hover:underline hover:underline-offset-4"
           >
-            <ArrowLeft className="size-4" aria-hidden="true" />
+            <ArrowLeft className="size-4 text-[#F59E0B]" aria-hidden="true" />
             Back to the library
           </Link>
         </div>
 
         <SectionList sections={book.sections} bookTitle={book.title} />
       </Container>
-    </>
+    </div>
   );
 }

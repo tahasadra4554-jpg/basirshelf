@@ -18,11 +18,11 @@ export default function LoginPage() {
         "Fast sign-in with email and password",
       ]}
       footer={
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-[#FEF3C7]/80">
           Don’t have an account?{" "}
           <Link
             href="/signup"
-            className="font-semibold text-primary hover:underline"
+            className="font-semibold text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
           >
             Sign up
           </Link>

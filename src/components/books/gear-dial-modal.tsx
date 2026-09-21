@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
-  animate,
   AnimatePresence,
   motion,
   useMotionValue,
   useReducedMotion,
-  useTransform,
+  useSpring,
 } from "framer-motion";
 import {
   ArrowRight,
@@ -15,60 +14,88 @@ import {
   ChevronRight,
   FileText,
   Headphones,
-  Image as ImageIcon,
+  ImageIcon,
   Play,
   RotateCw,
   X,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import type { Section } from "@/lib/types";
 
 import { cn } from "@/lib/utils";
 
+// Mechanical 24-Teeth Gear Outline SVG Path (Computed for 340x340 viewBox, center 170,170)
+const GEAR_SVG_PATH = (() => {
+  const cx = 170;
+  const cy = 170;
+  const teeth = 24;
+  const rOuter = 162; // Outer tip of tooth
+  const rInner = 144; // Root trough between teeth
+  const toothWidth = 0.45; // Fraction of step for tooth top
+  const step = (2 * Math.PI) / teeth;
+
+  let d = "";
+  for (let i = 0; i < teeth; i++) {
+    const angleStart = i * step;
+    const a1 = angleStart;
+    const a2 = angleStart + step * (1 - toothWidth) * 0.5;
+    const a3 = angleStart + step * (1 + toothWidth) * 0.5;
+    const a4 = (i + 1) * step;
+
+    const x1 = cx + rInner * Math.cos(a1);
+    const y1 = cy + rInner * Math.sin(a1);
+    const x2 = cx + rOuter * Math.cos(a2);
+    const y2 = cy + rOuter * Math.sin(a2);
+    const x3 = cx + rOuter * Math.cos(a3);
+    const y3 = cy + rOuter * Math.sin(a3);
+    const x4 = cx + rInner * Math.cos(a4);
+    const y4 = cy + rInner * Math.sin(a4);
+
+    if (i === 0) {
+      d += `M ${x1.toFixed(2)} ${y1.toFixed(2)} `;
+    } else {
+      d += `L ${x1.toFixed(2)} ${y1.toFixed(2)} `;
+    }
+    d += `L ${x2.toFixed(2)} ${y2.toFixed(2)} `;
+    d += `L ${x3.toFixed(2)} ${y3.toFixed(2)} `;
+    d += `L ${x4.toFixed(2)} ${y4.toFixed(2)} `;
+  }
+  d += "Z";
+  return d;
+})();
+
+// Web Audio Mechanical Tick Sound Generator
+function playMechanicalTick(isMajor = false) {
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    // Crisp metallic click frequencies
+    osc.frequency.setValueAtTime(isMajor ? 1200 : 800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(120, ctx.currentTime + 0.025);
+
+    gain.gain.setValueAtTime(isMajor ? 0.25 : 0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.025);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.026);
+  } catch {
+    // Ignore audio restriction errors
+  }
+}
+
 interface GearDialModalProps {
   section: Section | null;
   bookTitle?: string;
   onClose: () => void;
-  onSelectOption: (
-    option: "video" | "audio" | "images" | "pdf",
-    section: Section,
-  ) => void;
-}
-
-// Generate an authentic mechanical gear SVG path with involute teeth
-function generateGearPath(teeth = 24, outerR = 158, innerR = 142, cx = 170, cy = 170): string {
-  const points: string[] = [];
-  const step = (Math.PI * 2) / teeth;
-  for (let i = 0; i < teeth; i++) {
-    const angle = i * step - Math.PI / 2;
-    const a1 = angle;
-    const a2 = angle + step * 0.22;
-    const a3 = angle + step * 0.35;
-    const a4 = angle + step * 0.65;
-    const a5 = angle + step * 0.78;
-    const a6 = angle + step;
-
-    points.push(`${i === 0 ? "M" : "L"} ${cx + innerR * Math.cos(a1)} ${cy + innerR * Math.sin(a1)}`);
-    points.push(`L ${cx + innerR * Math.cos(a2)} ${cy + innerR * Math.sin(a2)}`);
-    points.push(`L ${cx + outerR * Math.cos(a3)} ${cy + outerR * Math.sin(a3)}`);
-    points.push(`L ${cx + outerR * Math.cos(a4)} ${cy + outerR * Math.sin(a4)}`);
-    points.push(`L ${cx + innerR * Math.cos(a5)} ${cy + innerR * Math.sin(a5)}`);
-    points.push(`L ${cx + innerR * Math.cos(a6)} ${cy + innerR * Math.sin(a6)}`);
-  }
-  return points.join(" ") + " Z";
-}
-
-const GEAR_SVG_PATH = generateGearPath(24, 158, 142, 170, 170);
-
-function triggerHaptic() {
-  if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-    try {
-      navigator.vibrate(15);
-    } catch {
-      // Ignore vibration errors
-    }
-  }
+  onSelectOption: (optionId: "video" | "audio" | "images" | "pdf", section: Section) => void;
 }
 
 export function GearDialModal({
@@ -79,31 +106,16 @@ export function GearDialModal({
 }: GearDialModalProps) {
   const id = useId();
   const prefersReduced = useReducedMotion();
-  const dialRef = useRef<HTMLDivElement | null>(null);
+  const dialRef = useRef<HTMLDivElement>(null);
 
-  // Rotation motion value (in continuous degrees)
-  const rotation = useMotionValue(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const activeIndexRef = useRef(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  // Drag state
-  const centerRef = useRef({ x: 0, y: 0 });
-  const startPointerAngleRef = useRef(0);
-  const startGearAngleRef = useRef(0);
-  const lastPointerAngleRef = useRef(0);
-  const lastTimeRef = useRef(0);
-  const velocityRef = useRef(0);
-  const isDraggingRef = useRef(false);
-
-  // Parse availability
-  const hasVideo = Boolean(section?.video_url);
-  const hasAudio = Boolean(section?.audio_url);
-  const hasHandout = Boolean(section?.handout_url);
+  // Available media flags
   const rawImages = section?.images_url || section?.image_url;
   const hasImages = Boolean(rawImages && rawImages.trim().length > 0);
+  const hasVideo = Boolean(section?.video_url && section.video_url.trim().length > 0);
+  const hasAudio = Boolean(section?.audio_url && section.audio_url.trim().length > 0);
+  const hasHandout = Boolean(section?.handout_url && section.handout_url.trim().length > 0);
 
-  // 4 Options (spaced at 90° intervals around dial)
+  // 4 Cardinal Media Options positioned at 90° intervals:
   // 0°: Video (Top/12 o'clock)
   // 90°: Audio (Right/3 o'clock)
   // 180°: Images (Bottom/6 o'clock)
@@ -115,9 +127,9 @@ export function GearDialModal({
       subtitle: "Watch lesson video",
       icon: Play,
       baseAngle: 0,
-      color: "#EF4444",
-      bgBadge: "bg-red-500",
-      glowColor: "rgba(239, 68, 68, 0.4)",
+      color: "#F59E0B",
+      bgBadge: "bg-amber-500",
+      glowColor: "rgba(245, 158, 11, 0.45)",
       available: hasVideo,
     },
     {
@@ -126,9 +138,9 @@ export function GearDialModal({
       subtitle: "Listen to audio lesson",
       icon: Headphones,
       baseAngle: 90,
-      color: "#A855F7",
-      bgBadge: "bg-purple-500",
-      glowColor: "rgba(168, 85, 247, 0.4)",
+      color: "#F59E0B",
+      bgBadge: "bg-amber-500",
+      glowColor: "rgba(245, 158, 11, 0.45)",
       available: hasAudio,
     },
     {
@@ -137,9 +149,9 @@ export function GearDialModal({
       subtitle: "Open image gallery",
       icon: ImageIcon,
       baseAngle: 180,
-      color: "#10B981",
-      bgBadge: "bg-emerald-500",
-      glowColor: "rgba(16, 185, 129, 0.4)",
+      color: "#F59E0B",
+      bgBadge: "bg-amber-500",
+      glowColor: "rgba(245, 158, 11, 0.45)",
       available: hasImages,
     },
     {
@@ -148,149 +160,126 @@ export function GearDialModal({
       subtitle: "Read lesson handout",
       icon: FileText,
       baseAngle: 270,
-      color: "#3B82F6",
-      bgBadge: "bg-blue-500",
-      glowColor: "rgba(59, 130, 246, 0.4)",
+      color: "#F59E0B",
+      bgBadge: "bg-amber-500",
+      glowColor: "rgba(245, 158, 11, 0.45)",
       available: hasHandout,
     },
   ];
 
+  // Raw rotation motion value
+  const rawRotation = useMotionValue(0);
+
+  // Smooth spring physics for snappiness & mechanical weight
+  const rotation = useSpring(rawRotation, {
+    stiffness: 280,
+    damping: 26,
+    mass: 0.9,
+  });
+
+  // Track active index
+  const [activeIndex, setActiveIndex] = useState(0);
+  const lastDetentAngle = useRef(0);
+
+  // Counter-rotation motion value so option icons remain upright
+  const counterRotation = useMotionValue(0);
+
   // Update active index whenever rotation changes
   useEffect(() => {
     const unsubscribe = rotation.on("change", (latest) => {
-      // Normalized angle pointing to 12 o'clock
-      const normalized = ((-latest % 360) + 360) % 360;
-      const idx = (Math.round(normalized / 90) % 4 + 4) % 4;
-      if (idx !== activeIndexRef.current) {
-        activeIndexRef.current = idx;
-        setActiveIndex(idx);
-        triggerHaptic();
+      counterRotation.set(-latest);
+
+      // Normalize angle to [0, 360)
+      const normalized = (((-latest % 360) + 360) % 360);
+      // Closest cardinal option (each sector is 90 degrees, offset by 45)
+      const index = Math.round(normalized / 90) % 4;
+
+      setActiveIndex((prev) => {
+        if (prev !== index) {
+          playMechanicalTick(true);
+        }
+        return index;
+      });
+
+      // Sound feedback every 10 degrees of turn
+      if (Math.abs(latest - lastDetentAngle.current) >= 10) {
+        lastDetentAngle.current = latest;
+        playMechanicalTick(false);
       }
     });
+
     return () => unsubscribe();
-  }, [rotation]);
+  }, [rotation, counterRotation]);
 
-  // Pointer drag events for rotational dial
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const rect = dialRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    centerRef.current = { x: cx, y: cy };
+  // Pointer dragging state
+  const isDragging = useRef(false);
+  const startAngle = useRef(0);
+  const startRotation = useRef(0);
+  const lastPointerAngle = useRef(0);
+  const angularVelocity = useRef(0);
 
-    const currentAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
-    startPointerAngleRef.current = currentAngle;
-    startGearAngleRef.current = rotation.get();
-    lastPointerAngleRef.current = currentAngle;
-    lastTimeRef.current = performance.now();
-    velocityRef.current = 0;
-    isDraggingRef.current = true;
-    setIsDragging(true);
+  // Calculate angle between dial center and pointer
+  const getAngle = useCallback((clientX: number, clientY: number) => {
+    if (!dialRef.current) return 0;
+    const rect = dialRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    return (Math.atan2(dy, dx) * 180) / Math.PI;
+  }, []);
 
-    try {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    } catch {
-      // Ignore
-    }
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Only capture primary button
+    if (e.button !== 0) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    isDragging.current = true;
+    startAngle.current = getAngle(e.clientX, e.clientY);
+    startRotation.current = rawRotation.get();
+    lastPointerAngle.current = startAngle.current;
+    angularVelocity.current = 0;
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    const cx = centerRef.current.x;
-    const cy = centerRef.current.y;
-    const currentAngle = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    const currentAngle = getAngle(e.clientX, e.clientY);
+    let delta = currentAngle - startAngle.current;
 
-    let diff = currentAngle - lastPointerAngleRef.current;
-    while (diff > 180) diff -= 360;
-    while (diff < -180) diff += 360;
+    // Handle wrapping around 180 / -180 boundary
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
 
-    const now = performance.now();
-    const dt = now - lastTimeRef.current;
-    if (dt > 0) {
-      velocityRef.current = diff / dt; // deg/ms
-    }
-    lastTimeRef.current = now;
-    lastPointerAngleRef.current = currentAngle;
+    let frameDelta = currentAngle - lastPointerAngle.current;
+    if (frameDelta > 180) frameDelta -= 360;
+    if (frameDelta < -180) frameDelta += 360;
+    angularVelocity.current = frameDelta;
+    lastPointerAngle.current = currentAngle;
 
-    const newRot = rotation.get() + diff;
-    rotation.set(newRot);
+    rawRotation.set(startRotation.current + delta);
   };
 
-  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-    isDraggingRef.current = false;
-    setIsDragging(false);
-
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging.current) return;
+    isDragging.current = false;
     try {
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {
       // Ignore
     }
 
-    // Inertia & Snapping to nearest 90°
-    const v = velocityRef.current;
-    const currentRot = rotation.get();
-    const inertiaDelta = prefersReduced ? 0 : Math.max(Math.min(v * 160, 270), -270);
-    const projectedRot = currentRot + inertiaDelta;
-    const snappedRot = Math.round(projectedRot / 90) * 90;
-
-    animate(rotation, snappedRot, {
-      type: "spring",
-      stiffness: 220,
-      damping: prefersReduced ? 30 : 22,
-      onComplete: () => {
-        const finalNorm = ((-snappedRot % 360) + 360) % 360;
-        const finalIdx = (Math.round(finalNorm / 90) % 4 + 4) % 4;
-        setActiveIndex(finalIdx);
-        activeIndexRef.current = finalIdx;
-      },
-    });
+    // Inertia & snap to nearest 90-degree detent
+    const currentRot = rawRotation.get();
+    const targetWithMomentum = currentRot + angularVelocity.current * 4;
+    const snapped = Math.round(targetWithMomentum / 90) * 90;
+    rawRotation.set(snapped);
   };
 
-  // Step dial clockwise / counter-clockwise
-  const stepDial = (direction: 1 | -1) => {
-    const currentRot = rotation.get();
-    const currentSnapped = Math.round(currentRot / 90) * 90;
-    const targetRot = currentSnapped - direction * 90;
-    animate(rotation, targetRot, {
-      type: "spring",
-      stiffness: 240,
-      damping: 24,
-    });
-  };
-
-  // Rotate directly to a chosen option
-  const rotateToOption = (targetIndex: number) => {
-    const targetAngle = -targetIndex * 90;
-    const currentRot = rotation.get();
-    const diff = ((((targetAngle - currentRot) % 360) + 540) % 360) - 180;
-    const targetRot = currentRot + diff;
-
-    animate(rotation, targetRot, {
-      type: "spring",
-      stiffness: 240,
-      damping: 24,
-    });
-  };
-
-  // Confirm selection
-  const handleSelectActive = () => {
-    if (!section) return;
-    const current = options[activeIndex];
-    if (!current.available) {
-      toast.error(`${current.label} is not available for this unit.`);
-      return;
-    }
-    onClose();
-    onSelectOption(current.id, section);
-  };
-
-  // Keyboard navigation
+  // Keyboard accessibility: Left/Right arrow rotates dial
   useEffect(() => {
+    if (!section) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        e.preventDefault();
         onClose();
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         e.preventDefault();
@@ -303,32 +292,62 @@ export function GearDialModal({
         handleSelectActive();
       }
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, activeIndex, section]);
+  }, [section, activeIndex]);
+
+  const stepDial = (direction: 1 | -1) => {
+    const current = Math.round(rawRotation.get() / 90) * 90;
+    // Step by 90 degrees
+    const next = current + direction * -90;
+    rawRotation.set(next);
+  };
+
+  const rotateToOption = (targetIndex: number) => {
+    // Current normalized index
+    const currentRot = rawRotation.get();
+    const currentNorm = (((-currentRot % 360) + 360) % 360);
+    const currentIndex = Math.round(currentNorm / 90) % 4;
+
+    let diff = targetIndex - currentIndex;
+    if (diff > 2) diff -= 4;
+    if (diff < -2) diff += 4;
+
+    rawRotation.set(currentRot - diff * 90);
+  };
+
+  const handleSelectActive = () => {
+    if (!section) return;
+    const active = options[activeIndex];
+    if (active.available) {
+      onSelectOption(active.id, section);
+      onClose();
+    }
+  };
+
+  if (!section) return null;
 
   const activeOption = options[activeIndex];
   const ActiveIcon = activeOption.icon;
-
-  // Counter-rotation transform to keep badges upright
-  const counterRotation = useTransform(rotation, (val) => -val);
 
   return (
     <AnimatePresence>
       {section ? (
         <div
-          className="overlay-center fixed inset-0 z-50 flex flex-col items-center justify-center p-3 sm:p-4 select-none touch-none overflow-y-auto"
           role="dialog"
           aria-modal="true"
-          aria-label={`Select media for ${section.title}`}
+          aria-label={`Media selector dial for ${section.title}`}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none"
         >
-          {/* Dark Glassmorphism Backdrop with 12px blur */}
+          {/* Deep Navy Backdrop with transparency */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-[12px]"
+            className="fixed inset-0 bg-[#0A1628]/85 backdrop-blur-[12px]"
           />
 
           {/* Close button at top-4 right-4 */}
@@ -336,7 +355,7 @@ export function GearDialModal({
             type="button"
             onClick={onClose}
             aria-label="Close selector dial"
-            className="absolute top-4 right-4 z-50 grid size-10 place-items-center rounded-full border border-white/20 bg-white/10 text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/20 hover:text-white active:scale-95 sm:size-11"
+            className="absolute top-4 right-4 z-50 grid size-10 place-items-center rounded-full border border-amber-500/30 bg-[#0F1B2D] text-[#FEF3C7] shadow-lg backdrop-blur-md transition-all hover:bg-amber-500/20 hover:text-[#FCD34D] active:scale-95 sm:size-11"
           >
             <X className="size-5" />
           </button>
@@ -351,13 +370,13 @@ export function GearDialModal({
           >
             {/* Header info */}
             <div className="mb-1 text-center sm:mb-2 shrink-0">
-              <span className="eyebrow text-[9px] tracking-[0.2em] text-indigo dark:text-indigo sm:text-[10px]">
+              <span className="eyebrow text-[9px] tracking-[0.2em] text-[#FBBF24] sm:text-[10px]">
                 {bookTitle ? `${bookTitle} • Unit Selector` : "Unit Media Dial"}
               </span>
-              <h2 className="mt-0.5 font-serif text-base font-bold tracking-tight text-white sm:text-xl">
+              <h2 className="mt-0.5 font-serif text-base font-bold tracking-tight text-[#FDFBF7] sm:text-xl">
                 {section.title}
               </h2>
-              <p className="mt-0.5 text-[11px] text-slate-300 sm:text-xs">
+              <p className="mt-0.5 text-[11px] text-[#FEF3C7]/80 sm:text-xs">
                 Drag the wheel to rotate • Pointer at top selects
               </p>
             </div>
@@ -372,13 +391,12 @@ export function GearDialModal({
                 <div
                   className="size-0 border-x-[11px] border-x-transparent border-t-[16px] transition-all"
                   style={{
-                    borderTopColor: activeOption.color,
-                    filter: `drop-shadow(0 0 10px ${activeOption.glowColor})`,
+                    borderTopColor: "#F59E0B",
+                    filter: "drop-shadow(0 0 10px rgba(245, 158, 11, 0.6))",
                   }}
                 />
                 <div
-                  className="h-2.5 w-0.5 rounded-full transition-colors"
-                  style={{ backgroundColor: activeOption.color }}
+                  className="h-2.5 w-0.5 rounded-full transition-colors bg-[#F59E0B]"
                 />
               </div>
 
@@ -389,13 +407,15 @@ export function GearDialModal({
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={handlePointerUp}
-                className={cn(
-                  "relative size-full cursor-grab active:cursor-grabbing",
-                  isDragging && "cursor-grabbing",
-                )}
-                style={{ touchAction: "none" }}
+                tabIndex={0}
+                role="slider"
+                aria-label="Media Option Dial"
+                aria-valuemin={0}
+                aria-valuemax={3}
+                aria-valuenow={activeIndex}
+                aria-valuetext={activeOption.label}
+                className="size-full cursor-grab active:cursor-grabbing outline-none focus-visible:ring-4 focus-visible:ring-[#F59E0B]/50 rounded-full"
               >
-                {/* Rotating Gear Body */}
                 <motion.div
                   style={{ rotate: rotation }}
                   className="relative size-full select-none"
@@ -406,28 +426,27 @@ export function GearDialModal({
                     className="size-full drop-shadow-[0_16px_36px_rgba(0,0,0,0.65)]"
                   >
                     <defs>
-                      {/* Metallic Rim Gradient */}
+                      {/* Amber Rim Gradient */}
                       <linearGradient id={`gear-teeth-grad-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#475569" />
-                        <stop offset="25%" stopColor="#64748B" />
-                        <stop offset="50%" stopColor="#1E293B" />
-                        <stop offset="75%" stopColor="#475569" />
-                        <stop offset="100%" stopColor="#0F172A" />
+                        <stop offset="0%" stopColor="#D97706" />
+                        <stop offset="35%" stopColor="#F59E0B" />
+                        <stop offset="65%" stopColor="#B45309" />
+                        <stop offset="100%" stopColor="#78350F" />
                       </linearGradient>
 
                       {/* Concentric Disc Radial Gradient */}
                       <radialGradient id={`gear-face-grad-${id}`} cx="50%" cy="50%" r="50%">
-                        <stop offset="0%" stopColor="#1E293B" />
-                        <stop offset="60%" stopColor="#0F172A" />
-                        <stop offset="90%" stopColor="#020617" />
-                        <stop offset="100%" stopColor="#1E293B" />
+                        <stop offset="0%" stopColor="#1A365D" />
+                        <stop offset="60%" stopColor="#0F1B2D" />
+                        <stop offset="90%" stopColor="#0A1628" />
+                        <stop offset="100%" stopColor="#1A365D" />
                       </radialGradient>
 
                       {/* Center Hub Metallic Ring */}
                       <linearGradient id={`hub-grad-${id}`} x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#94A3B8" />
-                        <stop offset="50%" stopColor="#334155" />
-                        <stop offset="100%" stopColor="#0F172A" />
+                        <stop offset="0%" stopColor="#FBBF24" />
+                        <stop offset="50%" stopColor="#D97706" />
+                        <stop offset="100%" stopColor="#78350F" />
                       </linearGradient>
                     </defs>
 
@@ -435,20 +454,20 @@ export function GearDialModal({
                     <path
                       d={GEAR_SVG_PATH}
                       fill={`url(#gear-teeth-grad-${id})`}
-                      stroke="#94A3B8"
+                      stroke="#F59E0B"
                       strokeWidth="1.5"
-                      strokeOpacity="0.3"
+                      strokeOpacity="0.8"
                     />
 
-                    {/* Outer Bevel Ring */}
+                    {/* Outer Bevel Ring: Amber #F59E0B */}
                     <circle
                       cx="170"
                       cy="170"
                       r="138"
                       fill="none"
-                      stroke="#64748B"
-                      strokeWidth="2"
-                      strokeOpacity="0.4"
+                      stroke="#F59E0B"
+                      strokeWidth="2.5"
+                      strokeOpacity="0.9"
                     />
 
                     {/* Recessed Gear Face */}
@@ -475,9 +494,9 @@ export function GearDialModal({
                           y1={y1}
                           x2={x2}
                           y2={y2}
-                          stroke="#94A3B8"
+                          stroke="#FBBF24"
                           strokeWidth={i % 9 === 0 ? "2" : "1"}
-                          strokeOpacity={i % 9 === 0 ? "0.6" : "0.25"}
+                          strokeOpacity={i % 9 === 0 ? "0.9" : "0.4"}
                         />
                       );
                     })}
@@ -488,7 +507,7 @@ export function GearDialModal({
                       cy="170"
                       r="70"
                       fill="none"
-                      stroke="#334155"
+                      stroke="#F59E0B"
                       strokeWidth="1.5"
                       strokeDasharray="4 4"
                       strokeOpacity="0.4"
@@ -500,15 +519,15 @@ export function GearDialModal({
                       cy="170"
                       r="46"
                       fill={`url(#hub-grad-${id})`}
-                      stroke="#64748B"
+                      stroke="#F59E0B"
                       strokeWidth="2"
                     />
                     <circle
                       cx="170"
                       cy="170"
                       r="36"
-                      fill="#0F172A"
-                      stroke="#475569"
+                      fill="#0F1B2D"
+                      stroke="#F59E0B"
                       strokeWidth="1.5"
                     />
 
@@ -523,8 +542,8 @@ export function GearDialModal({
                           cx={bx}
                           cy={by}
                           r="2.5"
-                          fill="#CBD5E1"
-                          stroke="#1E293B"
+                          fill="#FCD34D"
+                          stroke="#78350F"
                           strokeWidth="0.8"
                         />
                       );
@@ -534,19 +553,17 @@ export function GearDialModal({
                   {/* Center Jewel / Dial Core */}
                   <div className="pointer-events-none absolute inset-0 grid place-items-center">
                     <div
-                      className="grid size-12 place-items-center rounded-full border border-white/20 bg-gradient-to-br from-indigo to-slate-900 shadow-inner transition-colors"
+                      className="grid size-12 place-items-center rounded-full border border-amber-500/40 bg-gradient-to-br from-[#F59E0B] to-[#B45309] shadow-inner transition-colors"
                       style={{
-                        boxShadow: `0 0 20px ${activeOption.glowColor}`,
+                        boxShadow: "0 0 20px rgba(245, 158, 11, 0.5)",
                       }}
                     >
-                      <RotateCw className="size-4 animate-spin text-white/70 [animation-duration:12s]" />
+                      <RotateCw className="size-4 animate-spin text-[#0A1628] [animation-duration:12s]" />
                     </div>
                   </div>
 
                   {/* The 4 Option Badges Around the Dial (Radius: 104px) */}
                   {options.map((opt, idx) => {
-                    // Position at radius 104px from center (170, 170)
-                    // baseAngle: 0 -> Top, 90 -> Right, 180 -> Bottom, 270 -> Left
                     const rad = ((opt.baseAngle - 90) * Math.PI) / 180;
                     const r = 104;
                     const topPos = 170 + r * Math.sin(rad);
@@ -573,34 +590,42 @@ export function GearDialModal({
                         }}
                         className="cursor-pointer"
                       >
-                        {/* Counter-rotate badge content so icons and labels stay perfectly upright */}
+                        {/* Counter-rotate badge content so icons and labels stay upright */}
                         <motion.div
                           animate={{
                             scale: isActive ? 1.18 : 0.9,
                           }}
                           transition={{ type: "spring", stiffness: 350, damping: 25 }}
                           className={cn(
-                            "flex flex-col items-center justify-center rounded-2xl p-2 transition-all",
+                            "flex flex-col items-center justify-center rounded-2xl p-2 transition-all border",
                             isActive
-                              ? "bg-slate-900/90 shadow-2xl ring-2 backdrop-blur-md"
-                              : "bg-slate-950/60 opacity-60 hover:opacity-90",
+                              ? "bg-[#0F1B2D] shadow-2xl ring-2 ring-[#F59E0B] border-[#F59E0B] backdrop-blur-md"
+                              : "bg-[#0A1628]/80 border-amber-500/20 opacity-70 hover:opacity-100",
                             !opt.available && "opacity-35",
                           )}
                           style={{
                             rotate: counterRotation,
                             boxShadow: isActive
-                              ? `0 0 24px ${opt.glowColor}, 0 4px 12px rgba(0,0,0,0.5)`
+                              ? "0 0 24px rgba(245, 158, 11, 0.45), 0 4px 12px rgba(0,0,0,0.5)"
                               : undefined,
-                            borderColor: isActive ? opt.color : "transparent",
                           }}
                         >
                           <span
-                            className="grid size-9 place-items-center rounded-xl text-white shadow-md transition-transform"
-                            style={{ backgroundColor: opt.color }}
+                            className={cn(
+                              "grid size-9 place-items-center rounded-xl shadow-md transition-transform",
+                              isActive
+                                ? "bg-[#F59E0B] text-[#0A1628]"
+                                : "bg-[#1A365D] text-[#FBBF24]",
+                            )}
                           >
                             <OptIcon className="size-4.5" />
                           </span>
-                          <span className="mt-1 font-serif text-[11px] font-bold text-white tracking-wide">
+                          <span
+                            className={cn(
+                              "mt-1 font-serif text-[11px] font-bold tracking-wide",
+                              isActive ? "text-[#FDFBF7]" : "text-[#FEF3C7]/80",
+                            )}
+                          >
                             {opt.label}
                           </span>
                         </motion.div>
@@ -617,38 +642,37 @@ export function GearDialModal({
                 type="button"
                 onClick={() => stepDial(-1)}
                 aria-label="Previous option"
-                className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+                className="grid size-9 place-items-center rounded-full border border-amber-500/30 bg-[#0F1B2D] text-[#FEF3C7] hover:bg-amber-500/20 hover:text-[#FCD34D] transition-colors"
               >
                 <ChevronLeft className="size-4" />
               </button>
-              <span className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">
+              <span className="text-[11px] font-semibold tracking-wider text-[#FBBF24] uppercase">
                 {activeOption.label} selected
               </span>
               <button
                 type="button"
                 onClick={() => stepDial(1)}
                 aria-label="Next option"
-                className="grid size-9 place-items-center rounded-full border border-white/10 bg-white/5 text-white/70 hover:bg-white/15 hover:text-white transition-colors"
+                className="grid size-9 place-items-center rounded-full border border-amber-500/30 bg-[#0F1B2D] text-[#FEF3C7] hover:bg-amber-500/20 hover:text-[#FCD34D] transition-colors"
               >
                 <ChevronRight className="size-4" />
               </button>
             </div>
 
             {/* Selected Action Card & Select Button */}
-            <div className="mt-4 w-full rounded-2xl border border-white/15 bg-slate-900/80 p-4 shadow-xl backdrop-blur-xl">
+            <div className="mt-4 w-full rounded-2xl border border-amber-500/30 bg-[#0F1B2D] p-4 shadow-xl backdrop-blur-xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span
-                    className="grid size-11 shrink-0 place-items-center rounded-xl text-white shadow-lg transition-transform"
-                    style={{ backgroundColor: activeOption.color }}
+                    className="grid size-11 shrink-0 place-items-center rounded-xl text-[#0A1628] bg-[#F59E0B] shadow-lg transition-transform"
                   >
                     <ActiveIcon className="size-5" />
                   </span>
                   <div>
-                    <h4 className="font-serif text-base font-bold text-white">
+                    <h4 className="font-serif text-base font-bold text-[#FDFBF7]">
                       {activeOption.label}
                     </h4>
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-[#FEF3C7]/80">
                       {activeOption.available
                         ? activeOption.subtitle
                         : "Not available for this unit"}
@@ -658,10 +682,10 @@ export function GearDialModal({
 
                 <span
                   className={cn(
-                    "rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase",
+                    "rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase border",
                     activeOption.available
-                      ? "bg-emerald-500/15 text-emerald-400"
-                      : "bg-slate-800 text-slate-400",
+                      ? "border-amber-500/40 bg-amber-500/15 text-[#FBBF24]"
+                      : "border-border bg-slate-800 text-slate-400",
                   )}
                 >
                   {activeOption.available ? "Ready" : "Unavailable"}
@@ -674,24 +698,18 @@ export function GearDialModal({
                 onClick={handleSelectActive}
                 disabled={!activeOption.available}
                 className={cn(
-                  "mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold text-white shadow-lg transition-all",
+                  "mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold shadow-lg transition-all",
                   activeOption.available
-                    ? "hover:opacity-95 active:scale-[0.98] cursor-pointer"
-                    : "opacity-40 cursor-not-allowed",
+                    ? "btn-amber-primary cursor-pointer"
+                    : "bg-[#1A365D]/50 text-[#FEF3C7]/30 border border-border cursor-not-allowed",
                 )}
-                style={{
-                  backgroundColor: activeOption.available ? activeOption.color : "#334155",
-                  boxShadow: activeOption.available
-                    ? `0 6px 20px ${activeOption.glowColor}`
-                    : undefined,
-                }}
               >
                 <span>
                   {activeOption.available
                     ? `Open ${activeOption.label}`
                     : `${activeOption.label} Unavailable`}
                 </span>
-                {activeOption.available ? <ArrowRight className="size-4" /> : null}
+                {activeOption.available ? <ArrowRight className="size-4 text-[#0A1628]" /> : null}
               </button>
             </div>
           </motion.div>

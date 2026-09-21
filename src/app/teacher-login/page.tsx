@@ -21,13 +21,13 @@ export default function TeacherLoginPage() {
         "Upload PDF handouts to secure cloud storage",
       ]}
     >
-      <div className="mb-5 flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
+      <div className="mb-5 flex items-center gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#F59E0B] text-[#0A1628]">
           <ShieldCheck className="size-5" />
         </span>
-        <p className="text-xs leading-6 text-primary">
+        <p className="text-xs leading-6 text-[#FEF3C7]">
           Teacher access: once you sign in, your account role is set to
-          <span className="font-bold"> teacher </span>
+          <span className="font-bold text-[#F59E0B]"> teacher </span>
           and you are taken to the dashboard.
         </p>
       </div>
@@ -56,8 +56,8 @@ export default function TeacherLoginPage() {
         ]}
       />
 
-      <p className="mt-5 flex items-start gap-2 rounded-xl bg-muted px-3.5 py-3 text-[11px] leading-6 text-muted-foreground">
-        <KeyRound className="mt-0.5 size-3.5 shrink-0" />
+      <p className="mt-5 flex items-start gap-2 rounded-xl bg-[#1A365D]/40 border border-amber-500/20 px-3.5 py-3 text-[11px] leading-6 text-[#FEF3C7]/80">
+        <KeyRound className="mt-0.5 size-3.5 shrink-0 text-[#F59E0B]" />
         Usernames and passwords are issued by the institute office. If you forget yours, contact the Basir office.
       </p>
     </AuthShell>

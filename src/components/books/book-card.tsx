@@ -17,8 +17,7 @@ export function levelForBook(title: string): string | null {
 }
 
 /**
- * One card, three shapes:
- *  - `featured` — the entry point of the bento grid (Interchange 1)
+ * One card, two shapes:
  *  - `default`  — supporting panel, cover above the text
  *  - `row`      — text mode: a typographic line, no artwork at all
  */
@@ -42,29 +41,29 @@ export function BookCard({
       <li className="group">
         <Link
           href={href}
-          className="flex flex-col gap-2 px-4 py-5 transition-colors duration-300 hover:bg-accent sm:flex-row sm:items-baseline sm:gap-6 sm:px-6"
+          className="flex flex-col gap-2 px-4 py-5 transition-colors duration-300 hover:bg-[#FEF3C7]/40 dark:hover:bg-[#1A365D]/40 sm:flex-row sm:items-baseline sm:gap-6 sm:px-6"
         >
-          <span className="num-latin w-6 shrink-0 font-serif text-sm text-muted-foreground">
+          <span className="num-latin w-6 shrink-0 font-serif text-sm text-[#B45309] dark:text-[#FBBF24]">
             {String(position ?? 1).padStart(2, "0")}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="font-serif text-lg font-semibold text-navy transition-colors duration-300 group-hover:text-indigo-text dark:group-hover:text-indigo">
+            <span className="font-serif text-lg font-semibold text-foreground transition-colors duration-300 group-hover:text-[#D97706] dark:group-hover:text-[#FCD34D]">
               {book.title}
             </span>
             <span className="mt-1 block truncate text-sm leading-6 text-muted-foreground">
               {book.description ?? "No description yet."}
             </span>
           </span>
-          <span className="flex shrink-0 items-center gap-4 text-xs text-muted-foreground">
+          <span className="flex shrink-0 items-center gap-4 text-xs text-[#B45309] dark:text-[#FBBF24]">
             {level ? (
-              <span className="font-medium text-foreground/80">{level}</span>
+              <span className="font-medium text-foreground">{level}</span>
             ) : null}
             <span className="num-latin inline-flex items-center gap-1.5">
-              <Layers className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+              <Layers className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
               {units} units
             </span>
             <ArrowRight
-              className="size-4 text-indigo-text opacity-0 transition-opacity duration-300 group-hover:opacity-100 dark:text-indigo"
+              className="size-4 text-[#F59E0B] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               aria-hidden="true"
             />
           </span>
@@ -78,18 +77,18 @@ export function BookCard({
   return (
     <li
       className={cn(
-        "lift group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-all duration-300 hover:shadow-float",
-        isFirstBook && "border-indigo/40",
+        "lift group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-amber-500/25 bg-card shadow-soft transition-all duration-300 hover:border-[#F59E0B] hover:shadow-[0_0_30px_rgba(245,158,11,0.2)]",
+        isFirstBook && "border-amber-500/40",
         className,
       )}
     >
       <Link
         href={href}
-        className="absolute inset-0 z-10 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute inset-0 z-10 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]"
         aria-label={`Open ${book.title}${level ? `, ${level}` : ""}, ${units} units`}
       />
 
-      <div className="relative aspect-3/4 w-full overflow-hidden bg-muted/30">
+      <div className="relative aspect-3/4 w-full overflow-hidden bg-[#0A1628]">
         <BookCover
           title={book.title}
           coverImageUrl={book.cover_image_url}
@@ -98,7 +97,7 @@ export function BookCard({
           className="size-full object-cover object-center transition-transform duration-500 group-hover:scale-[1.035]"
         />
         {isFirstBook ? (
-          <span className="absolute start-3.5 top-3.5 z-20 rounded-full bg-indigo px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-white uppercase shadow-md">
+          <span className="absolute start-3.5 top-3.5 z-20 rounded-full bg-[#F59E0B] px-3 py-1 text-[10px] font-bold tracking-[0.12em] text-[#0A1628] uppercase shadow-md">
             Start here
           </span>
         ) : null}
@@ -106,11 +105,11 @@ export function BookCard({
 
       <div className="flex min-w-0 flex-1 flex-col p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="font-serif text-xl sm:text-2xl font-semibold tracking-tight text-navy text-balance">
+          <h3 className="font-serif text-xl sm:text-2xl font-semibold tracking-tight text-foreground text-balance group-hover:text-[#D97706] dark:group-hover:text-[#FCD34D] transition-colors duration-200">
             {book.title}
           </h3>
           {level ? (
-            <span className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold tracking-wide text-secondary-foreground uppercase">
+            <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-[#92400E] dark:text-[#FBBF24] uppercase">
               {level}
             </span>
           ) : null}
@@ -121,25 +120,25 @@ export function BookCard({
         </p>
 
         <div className="mt-auto pt-5">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[#B45309] dark:text-[#FBBF24]">
             <span className="num-latin inline-flex items-center gap-1.5">
-              <Layers className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+              <Layers className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
               {units} units
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <PlayCircle className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+              <PlayCircle className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
               Videos
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <FileText className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+              <FileText className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
               PDFs
             </span>
           </div>
 
-          <p className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-text transition-colors duration-200 group-hover:text-indigo dark:text-indigo">
+          <p className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-[#D97706] dark:text-[#FBBF24] transition-colors duration-200 group-hover:text-[#B45309] dark:group-hover:text-[#FCD34D]">
             Browse units
             <ArrowRight
-              className="size-4 transition-transform duration-300 group-hover:translate-x-1"
+              className="size-4 text-[#F59E0B] transition-transform duration-300 group-hover:translate-x-1"
               aria-hidden="true"
             />
           </p>

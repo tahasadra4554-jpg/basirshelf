@@ -54,19 +54,20 @@ export function WhyTrust() {
     <section
       id="why-basir"
       aria-labelledby="why-basir-heading"
-      className="scroll-mt-24 border-y border-border bg-card"
+      className="scroll-mt-24 border-y border-amber-500/20 bg-background text-foreground"
     >
       <Container className="py-16 sm:py-24">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="eyebrow text-indigo-text dark:text-indigo">
+          <p className="eyebrow inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/15 px-3 py-1 text-[#92400E] dark:text-[#FBBF24]">
             The institute effect
           </p>
           <h2
             id="why-basir-heading"
-            className="mt-4 font-serif text-3xl font-semibold tracking-tight text-navy text-balance sm:text-4xl"
+            className="mt-4 font-serif text-3xl font-semibold tracking-tight text-[#1A365D] dark:text-[#FCD34D] text-balance sm:text-4xl"
           >
             Why students trust BasirShelf
           </h2>
+          <div className="amber-rule-center" />
           <p className="mt-4 text-sm leading-8 text-muted-foreground sm:text-base">
             A library earns trust by being complete, quiet and dependable.
             These are the three promises we hold ourselves to.
@@ -77,33 +78,33 @@ export function WhyTrust() {
           {REASONS.map(({ Icon, title, body, proof }) => (
             <li
               key={title}
-              className="lift flex flex-col rounded-2xl border border-border bg-background p-7 shadow-soft"
+              className="lift flex flex-col rounded-2xl border border-amber-500/25 bg-card p-7 shadow-soft transition-all duration-300 hover:border-[#F59E0B] hover:shadow-[0_0_30px_rgba(245,158,11,0.2)]"
             >
-              <span className="grid size-11 place-items-center rounded-xl bg-navy text-navy-foreground">
-                <Icon className="size-5" aria-hidden="true" />
+              <span className="grid size-11 place-items-center rounded-xl border border-amber-500/30 bg-[#FEF3C7] dark:bg-[#1A365D] text-[#F59E0B] shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+                <Icon className="size-5 text-[#F59E0B]" aria-hidden="true" />
               </span>
-              <h3 className="mt-5 font-serif text-lg leading-snug font-semibold text-navy">
+              <h3 className="mt-5 font-serif text-lg leading-snug font-semibold text-foreground">
                 {title}
               </h3>
               <p className="mt-2.5 flex-1 text-sm leading-7 text-muted-foreground">
                 {body}
               </p>
-              <p className="mt-5 border-t border-border pt-4 text-[11px] font-semibold tracking-wide text-indigo-text uppercase dark:text-indigo">
+              <p className="mt-5 border-t border-amber-500/20 pt-4 text-[11px] font-semibold tracking-wide text-[#92400E] dark:text-[#FBBF24] uppercase">
                 {proof}
               </p>
             </li>
           ))}
         </ul>
 
-        <div className="mt-12 rounded-2xl border border-border bg-background p-6 sm:p-8">
-          <p className="eyebrow text-muted-foreground">
+        <div className="mt-12 rounded-2xl border border-amber-500/25 bg-card p-6 sm:p-8">
+          <p className="eyebrow text-[#B45309] dark:text-[#FBBF24]">
             Built for every learner
           </p>
           <ul className="mt-5 grid gap-6 sm:grid-cols-3">
             {ACCESS.map(({ Icon, title, body }) => (
               <li key={title} className="flex gap-3">
                 <Icon
-                  className="mt-0.5 size-4 shrink-0 text-indigo-text dark:text-indigo"
+                  className="mt-0.5 size-4 shrink-0 text-[#F59E0B]"
                   aria-hidden="true"
                 />
                 <div>

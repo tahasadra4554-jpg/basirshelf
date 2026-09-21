@@ -86,25 +86,30 @@ export function AuthButtons() {
     return (
       <div className="flex items-center gap-2">
         {user.role === "teacher" ? (
-          <Button asChild size="sm" variant="outline" className="hidden sm:inline-flex">
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="hidden border-amber-500/40 text-[#FCD34D] hover:bg-amber-500/10 sm:inline-flex"
+          >
             <Link href="/teacher">
-              <ShieldCheck />
+              <ShieldCheck className="text-[#F59E0B]" />
               Teacher panel
             </Link>
           </Button>
         ) : null}
 
-        <span className="hidden items-center gap-2 rounded-xl border border-border bg-card px-3 py-1.5 shadow-soft sm:flex">
-          <span className="grid size-7 place-items-center rounded-lg bg-primary/10 text-xs font-bold text-primary">
+        <span className="hidden items-center gap-2 rounded-xl border border-amber-500/30 bg-[#0F1B2D] px-3 py-1.5 shadow-soft sm:flex">
+          <span className="grid size-7 place-items-center rounded-lg bg-[#F59E0B] text-xs font-bold text-[#0A1628]">
             {initials(user.name)}
           </span>
           <span className="flex flex-col leading-tight">
-            <span className="max-w-[10rem] truncate text-xs font-semibold">
+            <span className="max-w-[10rem] truncate text-xs font-semibold text-[#FDFBF7]">
               {user.name}
             </span>
             <Badge
-              variant={user.role === "teacher" ? "soft" : "secondary"}
-              className="w-fit px-1.5 py-0 text-[10px]"
+              variant="outline"
+              className="w-fit border-amber-500/30 bg-amber-500/15 px-1.5 py-0 text-[10px] font-semibold text-[#FBBF24]"
             >
               {user.role === "teacher" ? "Teacher" : "Student"}
             </Badge>
@@ -118,8 +123,9 @@ export function AuthButtons() {
           disabled={pending}
           aria-label="Sign out"
           title="Sign out"
+          className="text-[#FEF3C7] hover:bg-amber-500/10 hover:text-[#FCD34D]"
         >
-          <LogOut />
+          <LogOut className="size-4" />
         </Button>
       </div>
     );
@@ -127,13 +133,22 @@ export function AuthButtons() {
 
   return (
     <div className="flex items-center gap-1.5 sm:gap-2">
-      <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+      <Button
+        asChild
+        variant="ghost"
+        size="sm"
+        className="hidden text-[#FDFBF7] hover:bg-amber-500/10 hover:text-[#FCD34D] sm:inline-flex"
+      >
         <Link href="/login">
-          <UserRound className="size-4" />
+          <UserRound className="size-4 text-[#F59E0B]" />
           Sign in
         </Link>
       </Button>
-      <Button asChild size="sm" className="px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm">
+      <Button
+        asChild
+        size="sm"
+        className="btn-amber-primary px-3 sm:px-4 py-1.5 text-xs sm:text-sm"
+      >
         <Link href="/signup">
           <GraduationCap className="size-3.5 sm:size-4" />
           <span>Sign up</span>

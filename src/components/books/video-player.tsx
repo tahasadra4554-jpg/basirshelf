@@ -122,7 +122,7 @@ export function VideoPlayer({
           href={target.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="font-semibold text-indigo-text underline underline-offset-4 hover:text-indigo dark:text-indigo"
+          className="font-semibold text-[#FBBF24] underline underline-offset-4 hover:text-[#FCD34D]"
         >
           Open the video on {target.provider}
           <ExternalLink className="ms-1 inline size-3" aria-hidden="true" />
@@ -154,8 +154,8 @@ export function VideoPlayer({
       {target.kind === "youtube" ? (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-              <Gauge className="size-3.5 text-indigo-text dark:text-indigo" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#FEF3C7]/80">
+              <Gauge className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
               Speed
             </span>
             <div
@@ -200,8 +200,8 @@ export function VideoPlayer({
               "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition-all duration-300",
               "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
               captions
-                ? "border-indigo/50 bg-accent text-indigo-text dark:text-indigo"
-                : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground",
+                ? "border-amber-500/50 bg-[#1A365D] text-[#FCD34D]"
+                : "border-amber-500/30 bg-[#0F1B2D] text-[#FEF3C7]/80 hover:bg-amber-500/10 hover:text-[#FCD34D]",
             )}
           >
             {captions ? (
@@ -219,7 +219,7 @@ export function VideoPlayer({
               setCurrentTime(0);
               setMountId((n) => n + 1);
             }}
-            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground underline-offset-4 transition-colors duration-300 hover:text-foreground hover:underline"
+            className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#FEF3C7]/70 underline-offset-4 transition-colors duration-200 hover:text-[#FCD34D] hover:underline"
           >
             <RotateCcw className="size-3.5" aria-hidden="true" />
             Restart lesson
@@ -229,7 +229,7 @@ export function VideoPlayer({
             href={target.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-text underline-offset-4 transition-colors duration-300 hover:underline dark:text-indigo"
+            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#FBBF24] underline-offset-4 transition-colors duration-200 hover:text-[#FCD34D] hover:underline"
           >
             Open on YouTube
             <ExternalLink className="size-3.5" aria-hidden="true" />
@@ -240,7 +240,7 @@ export function VideoPlayer({
           href={target.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-text underline-offset-4 transition-colors duration-300 hover:underline dark:text-indigo"
+          className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#FBBF24] underline-offset-4 transition-colors duration-200 hover:text-[#FCD34D] hover:underline"
         >
           Open on Aparat for full playback controls
           <ExternalLink className="size-3.5" aria-hidden="true" />

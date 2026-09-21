@@ -400,8 +400,8 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             className="fixed inset-0 z-40 cursor-pointer overflow-hidden transition-[backdrop-filter,background-color] duration-300"
             style={{
               backgroundColor: supportsBackdrop
-                ? "rgba(10, 22, 40, 0.4)"
-                : "rgba(10, 22, 40, 0.75)",
+                ? "rgba(10, 22, 40, 0.65)"
+                : "rgba(10, 22, 40, 0.85)",
               backdropFilter: supportsBackdrop
                 ? isMobile
                   ? "blur(8px) saturate(0.8)"
@@ -415,20 +415,20 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
               willChange: "backdrop-filter",
             }}
           >
-            {/* PART 4-1: Spotlight Effect - soft cream/white glow behind cassette */}
+            {/* Spotlight Effect - amber-tinted spotlight behind cassette */}
             <div
               className="pointer-events-none absolute inset-0"
               style={{
                 background:
-                  "radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.08), transparent 70%)",
+                  "radial-gradient(circle at 50% 80%, rgba(245, 158, 11, 0.15), transparent 70%)",
               }}
             />
 
-            {/* PART 4-2: Edge Vignette - subtle dark vignette around screen edges */}
+            {/* Edge Vignette */}
             <div
               className="pointer-events-none absolute inset-0"
               style={{
-                boxShadow: "inset 0 0 200px rgba(0, 0, 0, 0.3)",
+                boxShadow: "inset 0 0 200px rgba(0, 0, 0, 0.4)",
               }}
             />
           </motion.div>
@@ -465,8 +465,8 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             to { transform: rotate(360deg); }
           }
           @keyframes cassette-play-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(90, 103, 216, 0.5), inset 0 -2px 0 rgba(0,0,0,0.25); }
-            50% { box-shadow: 0 0 0 8px rgba(90, 103, 216, 0.12), inset 0 -2px 0 rgba(0,0,0,0.25); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5), inset 0 -2px 0 rgba(0,0,0,0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0.18), inset 0 -2px 0 rgba(0,0,0,0.25); }
           }
           @keyframes skip-click-pulse {
             0% { transform: scale(0.92); }
@@ -497,11 +497,11 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             whileTap={{ scale: 0.95 }}
             aria-label="Expand cassette audio player"
             title="Expand cassette player"
-            className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-[#1A365D]/30 bg-[#F5EFE6] px-3.5 py-2 shadow-[0_12px_28px_rgba(26,54,93,0.3)] backdrop-blur transition-all cursor-pointer"
+            className="fixed bottom-4 right-4 z-50 flex items-center gap-2.5 rounded-2xl border border-amber-500/30 bg-[#0F1B2D] px-3.5 py-2 shadow-[0_12px_28px_rgba(0,0,0,0.6)] backdrop-blur transition-all cursor-pointer"
           >
             <div
-              className={`relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-white transition-all ${
-                isPlaying ? "ring-2 ring-[#5A67D8] ring-offset-1 animate-pulse" : ""
+              className={`relative grid size-6 place-items-center rounded-full bg-[#1A365D] text-[#FDFBF7] transition-all ${
+                isPlaying ? "ring-2 ring-[#F59E0B] ring-offset-1 animate-pulse" : ""
               }`}
               style={{
                 animation:
@@ -510,13 +510,13 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                     : "none",
               }}
             >
-              <div className="size-1.5 rounded-full bg-[#F5EFE6]" />
+              <div className="size-1.5 rounded-full bg-[#F59E0B]" />
             </div>
             <div className="text-start">
-              <p className="font-serif text-[11px] font-bold text-[#1A365D] line-clamp-1">
+              <p className="font-serif text-[11px] font-bold text-[#FDFBF7] line-clamp-1">
                 {track.title}
               </p>
-              <p className="font-mono text-[9px] text-[#5A67D8] font-bold">
+              <p className="font-mono text-[9px] text-[#FBBF24] font-bold">
                 {isPlaying ? formatTime(currentTime) : "Paused"}
               </p>
             </div>
@@ -547,7 +547,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
             }}
           >
             {/* THE REAL PRE-MADE SVG CASSETTE TAPE CONTAINER */}
-            <div className="relative w-full aspect-[626/405] drop-shadow-[0_20px_40px_rgba(0,0,0,0.35)]">
+            <div className="relative w-full aspect-[626/405] rounded-2xl border border-amber-500/30 bg-[#F2EBDC] p-1 drop-shadow-[0_20px_40px_rgba(0,0,0,0.5)] overflow-hidden">
               {/* REAL CASSETTE SVG: provides plastic shell, label, window, screws, notches */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
@@ -567,7 +567,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                   aria-label="Minimize cassette player"
                   title="Minimize"
-                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-slate-800/20 hover:text-black transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8]"
+                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-[#0A1628]/20 text-[#1A365D] hover:bg-[#0A1628]/40 hover:text-black transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B]"
                 >
                   <Minus className="size-3" />
                 </button>
@@ -582,40 +582,40 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                   aria-label="Close audio player"
                   title="Close"
-                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-slate-800/10 text-[#1A365D] hover:bg-red-500 hover:text-white transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+                  className="grid size-5 sm:size-6 place-items-center rounded-full bg-[#0A1628]/20 text-[#1A365D] hover:bg-red-500 hover:text-white transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   <X className="size-3" />
                 </button>
               </div>
 
-              {/* TEXT OVERLAY ON LABEL (top: 13.5%, left: 8.5%) */}
+              {/* TEXT OVERLAY ON LABEL (top: 12%, left: 8.5%) */}
               <div
-                className="absolute pointer-events-none flex items-start justify-between"
+                className="absolute pointer-events-none flex items-center justify-between rounded-md bg-[#1A365D] px-2.5 py-1.5 shadow-sm border border-amber-500/30"
                 style={{
-                  top: "13.5%",
+                  top: "12%",
                   left: "8.5%",
                   width: "83%",
                 }}
               >
                 {/* Left: Book Title & Unit, Institute */}
                 <div className="flex flex-col min-w-0 pr-2">
-                  <h3 className="font-serif text-[12px] sm:text-[14px] font-bold text-[#1A365D] leading-none tracking-tight">
+                  <h3 className="font-serif text-[12px] sm:text-[14px] font-bold text-[#FDFBF7] leading-none tracking-tight">
                     {track.bookTitle || "Interchange 1"}
                   </h3>
-                  <p className="font-sans text-[10px] sm:text-[11.5px] font-semibold text-[#1E293B] leading-tight mt-1">
+                  <p className="font-sans text-[10px] sm:text-[11.5px] font-semibold text-[#FEF3C7] leading-tight mt-1">
                     {track.title}
                   </p>
-                  <p className="font-sans text-[8px] sm:text-[9.5px] text-slate-500 font-medium leading-none mt-1">
+                  <p className="font-sans text-[8px] sm:text-[9.5px] text-[#FBBF24]/90 font-medium leading-none mt-1">
                     Basir Language Institute
                   </p>
                 </div>
 
                 {/* Right: SIDE A badge + Monospace Time Display */}
                 <div className="shrink-0 flex items-center gap-1.5 pt-0.5">
-                  <span className="font-sans text-[8px] sm:text-[9px] font-bold tracking-wider text-[#1A365D] uppercase px-1 py-0.5 rounded border border-[#1A365D]/20 bg-white/70">
+                  <span className="font-sans text-[8px] sm:text-[9px] font-bold tracking-wider text-[#F59E0B] uppercase px-1.5 py-0.5 rounded border border-amber-500/40 bg-[#0A1628]">
                     SIDE A
                   </span>
-                  <div className="font-mono text-[9px] sm:text-[11px] font-bold text-[#1A365D] bg-white/85 px-1.5 py-0.5 rounded border border-[#1A365D]/15 shadow-xs">
+                  <div className="font-mono text-[9px] sm:text-[11px] font-bold text-[#FDFBF7] bg-[#0A1628]/95 px-1.5 py-0.5 rounded border border-amber-500/30 shadow-xs">
                     {formatTime(currentTime)} / {formatTime(duration)}
                   </div>
                 </div>
@@ -775,47 +775,47 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 aria-valuemin={0}
                 aria-valuemax={Math.round(duration || 100)}
                 aria-valuenow={Math.round(currentTime)}
-                className="absolute h-[4px] cursor-pointer rounded-full bg-[#CBD5E1] transition-all"
+                className="absolute h-[4px] cursor-pointer rounded-full bg-[#0A1628]/20 transition-all"
                 style={{
                   top: "67%",
                   left: "8%",
                   width: "84%",
                 }}
               >
-                {/* Indigo fill */}
+                {/* Amber fill */}
                 <div
-                  className="h-full rounded-full bg-[#5A67D8]"
+                  className="h-full rounded-full bg-[#F59E0B]"
                   style={{ width: `${progressPercent}%` }}
                 />
 
                 {/* Draggable Knob */}
                 <div
-                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[10px] rounded-full bg-[#5A67D8] border-2 border-white shadow-md transition-transform hover:scale-125"
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-[10px] rounded-full bg-[#FCD34D] border-2 border-[#0A1628] shadow-[0_0_10px_rgba(245,158,11,0.7)] transition-transform hover:scale-125"
                   style={{ left: `${progressPercent}%` }}
                 />
               </div>
             </div>
 
-            {/* CHANGE 1: CONTROLS DECK WITH STANDARD SKIP ARROWS (REWIND & FASTFORWARD) */}
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full px-3 py-2 rounded-xl bg-[#E7DECE] border border-[#B8AB96] shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
-              {/* 1. Skip Back 10s (Rewind icon: two triangles pointing left) */}
+            {/* CONTROLS DECK WITH SKIP ARROWS, ACTIVE AMBER PLAY BUTTON */}
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full px-3 py-2 rounded-xl bg-[#E7DECE] border border-amber-500/30 shadow-[0_6px_16px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.6)]">
+              {/* 1. Skip Back 10s (Amber icon on cream button) */}
               <button
                 type="button"
                 onClick={handleRewindClick}
                 aria-label="Back 10s"
                 title="Back 10s"
-                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white ${
-                  rewindClicked ? "scale-90 bg-indigo-50 border-indigo-400" : ""
+                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#F59E0B] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer hover:bg-white hover:text-[#FCD34D] ${
+                  rewindClicked ? "scale-90 bg-amber-500/20 border-amber-500" : ""
                 }`}
               >
                 <Rewind className="size-5 fill-current" />
                 {/* Visual Tooltip */}
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap">
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-[#FEF3C7] opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap border border-amber-500/30">
                   Back 10s
                 </span>
               </button>
 
-              {/* 2. Play / Pause (LARGER, active indigo #5A67D8 background with white icon) */}
+              {/* 2. Play / Pause (Active: Amber #F59E0B background with Navy icon) */}
               <button
                 ref={playButtonRef}
                 type="button"
@@ -826,10 +826,10 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   animation:
                     isPlaying && !prefersReduced ? "cassette-play-pulse 2s infinite" : "none",
                 }}
-                className={`flex size-12 sm:size-14 items-center justify-center rounded-xl border transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer ${
+                className={`flex size-12 sm:size-14 items-center justify-center rounded-xl border transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer ${
                   isPlaying
-                    ? "border-[#5A67D8] bg-[#5A67D8] text-white shadow-[0_4px_14px_rgba(90,103,216,0.5),inset_0_-2px_0_rgba(0,0,0,0.25)]"
-                    : "border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_3px_8px_rgba(0,0,0,0.12),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:bg-white"
+                    ? "border-[#F59E0B] bg-[#F59E0B] text-[#0A1628] shadow-[0_4px_16px_rgba(245,158,11,0.5),inset_0_-2px_0_rgba(0,0,0,0.25)]"
+                    : "border-[#B8AB96] bg-[#F7F2E7] text-[#0A1628] shadow-[0_3px_8px_rgba(0,0,0,0.12),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:bg-white"
                 }`}
               >
                 {isPlaying ? (
@@ -845,24 +845,24 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 onClick={stopPlayback}
                 aria-label="Stop audio"
                 title="Stop (Reset to 0:00)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#0A1628] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer hover:bg-white"
               >
                 <Square className="size-4 sm:size-5 fill-current" />
               </button>
 
-              {/* 4. Skip Forward 10s (FastForward icon: two triangles pointing right) */}
+              {/* 4. Skip Forward 10s (Amber icon on cream button) */}
               <button
                 type="button"
                 onClick={handleForwardClick}
                 aria-label="Forward 10s"
                 title="Forward 10s"
-                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white ${
-                  forwardClicked ? "scale-90 bg-indigo-50 border-indigo-400" : ""
+                className={`group relative flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#F59E0B] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer hover:bg-white hover:text-[#FCD34D] ${
+                  forwardClicked ? "scale-90 bg-amber-500/20 border-amber-500" : ""
                 }`}
               >
                 <FastForward className="size-5 fill-current" />
                 {/* Visual Tooltip */}
-                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap">
+                <span className="pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-[#0A1628] px-2 py-0.5 text-[10px] font-semibold text-[#FEF3C7] opacity-0 shadow-md transition-opacity group-hover:opacity-100 whitespace-nowrap border border-amber-500/30">
                   Forward 10s
                 </span>
               </button>
@@ -873,7 +873,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 onClick={cycleSpeed}
                 aria-label="Playback speed"
                 title={`Speed: ${playbackRate}x (click to change)`}
-                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#0A1628] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer hover:bg-white"
               >
                 <span className="font-mono text-xs sm:text-sm font-bold">
                   {playbackRate}x
@@ -890,7 +890,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                   aria-label={isMuted ? "Unmute audio" : "Mute audio"}
                   title="Volume control"
-                  className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                  className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#0A1628] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F59E0B] cursor-pointer hover:bg-white"
                 >
                   {isMuted || volume === 0 ? (
                     <VolumeX className="size-4 sm:size-5" />
@@ -906,17 +906,17 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                       initial={{ opacity: 0, y: 6, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.95 }}
-                      className="absolute bottom-full right-0 mb-2 flex items-center gap-2 rounded-xl border border-[#B8AB96] bg-[#F7F2E7] p-2.5 shadow-xl z-40"
+                      className="absolute bottom-full right-0 mb-2 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-[#0F1B2D] p-2.5 shadow-xl z-40"
                     >
                       <button
                         type="button"
                         onClick={toggleMute}
-                        className="text-[#1A365D] hover:opacity-75"
+                        className="text-[#FEF3C7] hover:text-[#FCD34D]"
                       >
                         {isMuted ? (
-                          <VolumeX className="size-4" />
+                          <VolumeX className="size-4 text-[#F59E0B]" />
                         ) : (
-                          <Volume2 className="size-4" />
+                          <Volume2 className="size-4 text-[#F59E0B]" />
                         )}
                       </button>
                       <input
@@ -927,7 +927,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                         value={isMuted ? 0 : volume}
                         onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
                         aria-label="Volume slider"
-                        className="h-1.5 w-20 cursor-pointer accent-[#5A67D8]"
+                        className="h-1.5 w-20 cursor-pointer accent-[#F59E0B]"
                       />
                     </motion.div>
                   ) : null}

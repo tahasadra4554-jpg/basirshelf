@@ -60,7 +60,7 @@ export function SearchField({
         Search books by title, level or topic
       </label>
       <Search
-        className="pointer-events-none absolute top-1/2 start-3.5 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 start-3.5 size-4 -translate-y-1/2 text-[#F59E0B]"
         aria-hidden="true"
       />
       <input
@@ -77,10 +77,9 @@ export function SearchField({
         placeholder="Search books, levels, topics…"
         autoComplete="off"
         className={cn(
-          "w-full rounded-full border border-input bg-card text-foreground shadow-soft",
-          "ps-10 placeholder:text-muted-foreground",
-          "focus-visible:border-indigo focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-          "transition-[box-shadow] duration-200",
+          "w-full rounded-full border border-amber-500/30 bg-[#0F1B2D] text-[#FEF3C7] shadow-soft placeholder:text-[#94A3B8]",
+          "ps-10 transition-all duration-200",
+          "focus-visible:border-[#F59E0B] focus-visible:ring-2 focus-visible:ring-[#F59E0B]/50 focus-visible:outline-none",
           compact
             ? "h-9 pe-3 text-[13px]"
             : "h-12 pe-11 text-sm",
@@ -96,7 +95,7 @@ export function SearchField({
           aria-label="Clear search"
           className={cn(
             "absolute top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground",
-            "transition-colors duration-300 hover:bg-accent hover:text-foreground",
+            "transition-colors duration-200 hover:bg-amber-500/20 hover:text-[#FCD34D]",
             compact ? "end-1.5" : "end-2.5",
           )}
         >

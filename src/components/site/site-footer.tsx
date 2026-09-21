@@ -29,13 +29,13 @@ export function SiteFooter() {
   return (
     <footer
       id="about"
-      className="scroll-mt-24 border-t border-border bg-navy text-navy-foreground"
+      className="scroll-mt-24 border-t border-amber-500/20 bg-[#0A1628] text-[#FEF3C7]/80"
     >
       <Container className="py-14 sm:py-16">
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1.2fr]">
           <div className="space-y-5">
             <BrandLogo tone="invert" />
-            <p className="max-w-sm text-sm leading-7 text-navy-foreground/80">
+            <p className="max-w-sm text-sm leading-7 text-[#FEF3C7]/70">
               BasirShelf is the digital library of {INSTITUTE.name}. Every book
               is split into ordered units, and each unit carries its own video
               lesson and PDF handout — always one click away.
@@ -50,7 +50,7 @@ export function SiteFooter() {
                   <span
                     title={label}
                     aria-label={label}
-                    className="grid size-9 place-items-center rounded-xl border border-white/20 text-navy-foreground/85 transition-all duration-300 hover:-translate-y-0.5 hover:border-white/45 hover:text-white"
+                    className="grid size-9 place-items-center rounded-xl border border-amber-500/30 bg-[#0F1B2D] text-[#FBBF24] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#F59E0B] hover:text-[#FCD34D] hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
                   >
                     <Icon className="size-4" aria-hidden="true" />
                   </span>
@@ -62,7 +62,7 @@ export function SiteFooter() {
           <nav aria-labelledby="footer-links">
             <h2
               id="footer-links"
-              className="eyebrow text-navy-foreground/70"
+              className="eyebrow text-[#FBBF24]"
             >
               Quick links
             </h2>
@@ -71,7 +71,7 @@ export function SiteFooter() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-navy-foreground/80 transition-colors duration-300 hover:text-white"
+                    className="text-sm text-[#FBBF24]/90 transition-colors duration-200 hover:text-[#FCD34D] hover:underline hover:underline-offset-4"
                   >
                     {link.label}
                   </Link>
@@ -81,42 +81,42 @@ export function SiteFooter() {
           </nav>
 
           <div>
-            <h2 className="eyebrow text-navy-foreground/70">Institute</h2>
-            <ul className="mt-4 space-y-3 text-sm text-navy-foreground/80">
+            <h2 className="eyebrow text-[#FBBF24]">Institute</h2>
+            <ul className="mt-4 space-y-3 text-sm text-[#FEF3C7]/80">
               <li className="flex items-start gap-2.5">
                 <MapPin
-                  className="mt-0.5 size-4 shrink-0 text-indigo"
+                  className="mt-0.5 size-4 shrink-0 text-[#F59E0B]"
                   aria-hidden="true"
                 />
                 <span className="leading-6">{INSTITUTE.address}</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Phone className="size-4 shrink-0 text-indigo" aria-hidden="true" />
+                <Phone className="size-4 shrink-0 text-[#F59E0B]" aria-hidden="true" />
                 <a
                   href={`tel:${INSTITUTE.phone.replace(/\s/g, "")}`}
-                  className="num-latin transition-colors duration-300 hover:text-white"
+                  className="num-latin text-[#FBBF24] transition-colors duration-200 hover:text-[#FCD34D]"
                 >
                   {INSTITUTE.phone}
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
-                <Mail className="size-4 shrink-0 text-indigo" aria-hidden="true" />
+                <Mail className="size-4 shrink-0 text-[#F59E0B]" aria-hidden="true" />
                 <a
                   href={`mailto:${INSTITUTE.email}`}
-                  className="transition-colors duration-300 hover:text-white"
+                  className="text-[#FBBF24] transition-colors duration-200 hover:text-[#FCD34D]"
                 >
                   {INSTITUTE.email}
                 </a>
               </li>
-              <li className="leading-6">Hours: {INSTITUTE.hours}</li>
+              <li className="leading-6 text-[#FEF3C7]/70">Hours: {INSTITUTE.hours}</li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-white/15 pt-6 text-xs text-navy-foreground/70 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-3 border-t border-amber-500/20 pt-6 text-xs text-[#FEF3C7]/60 sm:flex-row">
           <p>
             © {BUILD_YEAR}{" "}
-            <span className="font-semibold text-navy-foreground">
+            <span className="font-semibold text-[#FDFBF7]">
               BasirShelf
             </span>{" "}
             — all rights reserved by {INSTITUTE.name}.

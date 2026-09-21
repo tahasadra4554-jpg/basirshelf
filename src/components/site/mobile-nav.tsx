@@ -35,7 +35,7 @@ export function MobileNav({
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <div className="relative lg:hidden">
+    <div className="relative xl:hidden">
       <Button
         variant="ghost"
         size="icon"
@@ -43,6 +43,7 @@ export function MobileNav({
         aria-expanded={open}
         aria-controls="mobile-menu"
         onClick={() => setOpen((v) => !v)}
+        className="text-[#FDFBF7] hover:bg-amber-500/10 hover:text-[#FCD34D]"
       >
         {open ? <X className="size-5" /> : <Menu className="size-5" />}
       </Button>
@@ -50,7 +51,7 @@ export function MobileNav({
       {open ? (
         <div
           id="mobile-menu"
-          className="absolute top-12 end-0 z-50 w-[min(22rem,calc(100vw-2rem))] animate-fade-up rounded-2xl border border-border bg-card p-4 shadow-float backdrop-blur-xl"
+          className="absolute top-12 end-0 z-50 w-[min(22rem,calc(100vw-2rem))] animate-fade-up rounded-2xl border border-amber-500/30 bg-[#0F1B2D] p-4 shadow-float backdrop-blur-xl"
         >
           <SearchField id="mobile-search" className="mb-3" />
 
@@ -66,8 +67,8 @@ export function MobileNav({
                       className={cn(
                         "block rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors duration-200",
                         active
-                          ? "bg-accent text-foreground font-semibold"
-                          : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                          ? "bg-[#1A365D] text-[#F59E0B] font-semibold"
+                          : "text-[#FEF3C7] hover:bg-amber-500/10 hover:text-[#FCD34D]",
                       )}
                     >
                       {link.label}
@@ -77,28 +78,28 @@ export function MobileNav({
               })}
             </ul>
 
-            <div className="my-3 border-t border-border/60 pt-3">
+            <div className="my-3 border-t border-amber-500/20 pt-3">
               <div className="flex items-center justify-between px-2 py-1">
-                <span className="text-xs font-medium text-muted-foreground">
+                <span className="text-xs font-medium text-[#FEF3C7]/80">
                   Theme mode
                 </span>
                 <ThemeToggle />
               </div>
             </div>
 
-            <div className="space-y-1.5 border-t border-border/60 pt-3">
+            <div className="space-y-1.5 border-t border-amber-500/20 pt-3">
               <Link
                 href="/login"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-accent hover:text-foreground"
+                className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium text-[#FEF3C7] transition-colors duration-200 hover:bg-amber-500/10 hover:text-[#FCD34D]"
               >
-                <UserRound className="size-4" />
+                <UserRound className="size-4 text-[#F59E0B]" />
                 Student sign in
               </Link>
               <Link
                 href="/signup"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 rounded-xl bg-navy px-3.5 py-2.5 text-sm font-semibold text-navy-foreground transition-opacity hover:opacity-90"
+                className="btn-amber-primary flex items-center justify-center gap-2 rounded-xl px-3.5 py-2.5 text-sm"
               >
                 <GraduationCap className="size-4" />
                 Create free account

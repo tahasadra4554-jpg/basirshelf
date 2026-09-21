@@ -57,18 +57,18 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0A1628" },
     { media: "(prefers-color-scheme: light)", color: "#FDFBF7" },
-    { media: "(prefers-color-scheme: dark)", color: "#101828" },
   ],
   width: "device-width",
   initialScale: 1,
 };
 
 /**
- * Applies the saved theme before React hydrates. Kept inline and tiny so it
- * costs nothing and cannot be deferred behind the bundle.
+ * Applies the saved theme before React hydrates.
+ * Dark mode is the DEFAULT for all first-time visitors!
  */
-const THEME_BOOTSTRAP = `(function(){try{var s=localStorage.getItem("basirshelf:theme")||"system";var d=s==="dark"||(s==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+const THEME_BOOTSTRAP = `(function(){try{var s=localStorage.getItem("basirshelf:theme")||"dark";var d=s!=="light";var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){document.documentElement.classList.add("dark");}})();`;
 
 export default function RootLayout({
   children,
@@ -77,7 +77,7 @@ export default function RootLayout({
     <html
       lang="en"
       dir="ltr"
-      className={`${inter.variable} ${playfair.variable}`}
+      className={`dark ${inter.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
       <head>
@@ -108,9 +108,9 @@ export default function RootLayout({
             style: {
               fontFamily: "var(--font-sans)",
               borderRadius: "14px",
-              border: "1px solid var(--border)",
-              background: "var(--card)",
-              color: "var(--card-foreground)",
+              border: "1px solid rgba(245, 158, 11, 0.3)",
+              background: "#0F1B2D",
+              color: "#FEF3C7",
             },
           }}
         />

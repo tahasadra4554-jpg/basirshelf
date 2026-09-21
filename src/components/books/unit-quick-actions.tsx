@@ -148,7 +148,7 @@ export function UnitQuickActions({
       label: "PDF",
       subtitle: "Download handout",
       icon: FileText,
-      iconColor: "text-blue-500",
+      iconColor: "text-amber-500",
       available: hasHandout,
       onSelect: handleSelectPdf,
     },
@@ -283,11 +283,11 @@ export function UnitQuickActions({
         "group/gear relative grid size-9 shrink-0 place-items-center rounded-xl border border-transparent transition-all duration-200 ease-out",
         // Desktop: fades in on hover over unit row; always visible on mobile
         "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-        isOpen && "opacity-100 border-border/80 bg-accent text-[#5A67D8]",
+        isOpen && "opacity-100 border-amber-500/50 bg-[#1A365D] text-[#F59E0B]",
         // Visible focus ring
-        "focus-visible:ring-2 focus-visible:ring-indigo focus-visible:ring-offset-2 focus-visible:outline-none",
-        // Subtle gray (#94A3B8) -> accent indigo (#5A67D8) on hover
-        "text-[#94A3B8] hover:border-border/50 hover:bg-accent/60 hover:text-[#5A67D8]",
+        "focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:outline-none",
+        // Subtle amber on hover
+        "text-[#F59E0B] hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-[#FCD34D]",
       )}
     >
       <motion.div

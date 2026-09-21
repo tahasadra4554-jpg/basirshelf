@@ -5,13 +5,27 @@
 
 /*
   ---------------------------------------------------------------------------
-  BasirShelf — "The Modern Language Library"
-  Palette is defined once, in hex, so the WCAG audit in scripts/audit-a11y.mjs
-  reads the exact values that ship. Every pair used in the UI is >= 4.5:1.
+  BasirShelf — Premium Navy + Amber + White / Cream Theme
+  Dark mode is the DEFAULT theme.
 
-  navy   #1A365D  Deep Navy  — authority, headings, primary surfaces
-  cream  #FDFBF7  Warm Cream — paper-like background, reduces eye strain
-  indigo #5A67D8  Electric Indigo — interactive only (CTAs, hover, focus)
+  Navy (50%):
+    #0A1628 (deepest navy — page background)
+    #0F1B2D (slightly lighter navy — cards & panels)
+    #1A365D (medium navy — elevated surfaces)
+    #24476B (lighter navy — hover states)
+    rgba(245, 158, 11, 0.2) (amber-tinted borders / dividers)
+
+  Amber / Gold (25–30%):
+    #FCD34D (soft gold — headings h1, h2, h3)
+    #F59E0B (vibrant amber — buttons, active states, highlights, icons)
+    #FBBF24 (rich gold — badges, labels, links)
+    rgba(245, 158, 11, 0.15) (badge background)
+    rgba(245, 158, 11, 0.25) (card amber border)
+    box-shadow: 0 0 30px rgba(245, 158, 11, 0.2) (amber hover glow)
+
+  White / Cream (20–25%):
+    #FEF3C7 (warm cream-yellow — long body paragraphs & readability)
+    #FDFBF7 (warm white — card titles, hero headline contrast, numbers)
   ---------------------------------------------------------------------------
 */
 
@@ -38,14 +52,15 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Editorial pair: deep navy for text/structure, indigo for interaction */
-  --color-indigo: var(--indigo);
-  --color-indigo-text: var(--indigo-text);
+  /* Navy + Amber theme colors */
   --color-navy: var(--navy);
   --color-navy-foreground: var(--navy-foreground);
+  --color-amber: var(--amber);
+  --color-amber-gold: var(--amber-gold);
+  --color-amber-light: var(--amber-light);
   --color-cream: var(--cream);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
+  --color-cream-body: var(--cream-body);
+  --color-white-warm: var(--white-warm);
 
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 4px);
@@ -58,13 +73,13 @@
   --font-serif: var(--font-playfair), "Iowan Old Style", "Palatino Linotype",
     Palatino, Georgia, "Times New Roman", serif;
 
-  /* Soft, layered, editorial — never harsh */
-  --shadow-soft: 0 1px 2px 0 rgb(26 54 93 / 0.05),
-    0 10px 30px -14px rgb(26 54 93 / 0.18);
-  --shadow-float: 0 2px 4px 0 rgb(26 54 93 / 0.06),
-    0 28px 56px -18px rgb(26 54 93 / 0.28);
-  --shadow-glow: 0 10px 30px -10px rgb(90 103 216 / 0.5);
-  --shadow-inset: inset 0 1px 0 0 rgb(255 255 255 / 0.6);
+  /* Luxurious, layered shadows with amber glow */
+  --shadow-soft: 0 2px 4px 0 rgba(0, 0, 0, 0.4),
+    0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  --shadow-float: 0 4px 8px 0 rgba(0, 0, 0, 0.5),
+    0 24px 48px -15px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 35px rgba(245, 158, 11, 0.35);
+  --shadow-amber-hover: 0 0 30px rgba(245, 158, 11, 0.2);
 
   /* Motion: 300–400ms everywhere, one shared easing curve */
   --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
@@ -129,17 +144,16 @@
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgb(90 103 216 / 0.4);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 16px rgb(90 103 216 / 0);
+    box-shadow: 0 0 0 16px rgba(245, 158, 11, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(90 103 216 / 0);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
   }
 }
 
-/* Gentle pulse that plays once when a button is pressed */
 @keyframes press {
   0% {
     transform: scale(1);
@@ -155,95 +169,140 @@
   }
 }
 
+/* ---------------------------------------------------------------------------
+   LIGHT MODE (Secondary / User option via Theme Switcher)
+   --------------------------------------------------------------------------- */
 :root {
   --radius: 16px;
 
-  --cream: #fdfbf7;
-  --navy: #1a365d;
-  --navy-foreground: #fdfbf7;
-  --ink: #16233a;
-  --ink-soft: #47536b;
+  /* Navy palette */
+  --navy: #1A365D;
+  --navy-deep: #0A1628;
+  --navy-card: #FDFBF7;
+  --navy-surface: #EEF2F6;
+  --navy-hover: #E2E8F0;
+  --navy-foreground: #FDFBF7;
 
-  /* Electric Indigo — the interactive accent (spec brand colour).
-     #4c51bf is the darkened sibling used for indigo *text* on cream, so even
-     small labels clear 4.5:1 (#5a67d8 would only reach 4.65 with a large
-     font and 3.06 at 13px equivalents). */
-  --indigo: #5a67d8;
-  --indigo-text: #4c51bf;
+  /* Amber spectrum */
+  --amber: #D97706;
+  --amber-primary: #F59E0B;
+  --amber-gold: #1A365D;
+  --amber-light: #B45309;
+  --amber-badge-bg: #FEF3C7;
+  --amber-badge-text: #92400E;
+  --amber-border: rgba(217, 119, 6, 0.25);
 
-  --background: #fdfbf7;
-  --foreground: #16233a;
+  /* Cream & White */
+  --cream: #FDFBF7;
+  --cream-body: #1E293B;
+  --white-warm: #FDFBF7;
 
-  --card: #ffffff;
-  --card-foreground: #16233a;
+  --background: #FDFBF7;
+  --foreground: #0A1628;
 
-  --popover: #ffffff;
-  --popover-foreground: #16233a;
+  --card: #FDFBF7;
+  --card-foreground: #0A1628;
 
-  /* Primary buttons are deep navy on cream — the "quiet authority" look and
-     an 11.75:1 label. Indigo is reserved for hover, focus and accents. */
-  --primary: #1a365d;
-  --primary-foreground: #fdfbf7;
+  --popover: #FDFBF7;
+  --popover-foreground: #0A1628;
 
-  /* Quiet navy surfaces (badges, secondary buttons) */
-  --secondary: #eef1f7;
-  --secondary-foreground: #1a365d;
+  /* Primary button: amber background with deep navy text */
+  --primary: #F59E0B;
+  --primary-foreground: #0A1628;
 
-  --muted: #f2efe9;
-  --muted-foreground: #4e4a45;
+  --secondary: #FEF3C7;
+  --secondary-foreground: #92400E;
 
-  /* Hover wash: a whisper of indigo on cream */
-  --accent: #eceefb;
-  --accent-foreground: #1a365d;
+  --muted: #F3EFE6;
+  --muted-foreground: #4B5563;
 
-  --destructive: #9b2c2c;
-  --destructive-foreground: #fdfbf7;
+  --accent: #FEF3C7;
+  --accent-foreground: #92400E;
 
-  --success: #22543d;
-  --success-foreground: #fdfbf7;
+  --destructive: #DC2626;
+  --destructive-foreground: #FDFBF7;
 
-  --border: #9a8c77;
-  --input: #8d8781;
-  --ring: #5a67d8;
+  --success: #16A34A;
+  --success-foreground: #FDFBF7;
+
+  --border: rgba(217, 119, 6, 0.2);
+  --input: rgba(217, 119, 6, 0.3);
+  --ring: #F59E0B;
+
+  --shadow-soft: 0 1px 3px 0 rgba(10, 22, 40, 0.06), 0 10px 25px -10px rgba(10, 22, 40, 0.12);
+  --shadow-float: 0 4px 6px -1px rgba(10, 22, 40, 0.08), 0 20px 40px -15px rgba(10, 22, 40, 0.2);
+  --shadow-glow: 0 0 30px rgba(245, 158, 11, 0.25);
+  --shadow-amber-hover: 0 0 30px rgba(245, 158, 11, 0.2);
 }
 
+/* ---------------------------------------------------------------------------
+   DARK MODE (DEFAULT & PRIMARY EXPERIENCE)
+   50% Navy (#0A1628, #0F1B2D, #1A365D, #24476B)
+   25-30% Amber/Gold (#FCD34D, #F59E0B, #FBBF24, rgba(245, 158, 11, 0.25))
+   20-25% White/Cream (#FEF3C7 for body, #FDFBF7 for titles & contrast)
+   --------------------------------------------------------------------------- */
 .dark {
-  --background: #101828;
-  --foreground: #f7f5f0;
+  /* PART 2: THE NAVY BASE (50%) */
+  --navy: #0A1628;
+  --navy-deep: #0A1628;      /* Deepest navy page background */
+  --navy-card: #0F1B2D;      /* Card & panel background */
+  --navy-surface: #1A365D;   /* Elevated surfaces */
+  --navy-hover: #24476B;     /* Hover states */
+  --navy-foreground: #FDFBF7;
 
-  --card: #172036;
-  --card-foreground: #f7f5f0;
+  /* PART 3: THE AMBER SPECTRUM (25-30%) */
+  --amber: #F59E0B;
+  --amber-primary: #F59E0B;  /* Buttons, active states, highlights, icons */
+  --amber-gold: #FCD34D;     /* Soft gold for headings h1, h2, h3 */
+  --amber-light: #FBBF24;    /* Labels, badges, links */
+  --amber-badge-bg: rgba(245, 158, 11, 0.15);
+  --amber-badge-text: #FBBF24;
+  --amber-badge-border: rgba(245, 158, 11, 0.4);
+  --amber-border: rgba(245, 158, 11, 0.25);
 
-  --popover: #172036;
-  --popover-foreground: #f7f5f0;
+  /* PART 4: THE WHITE / CREAM (20-25%) */
+  --cream: #FEF3C7;          /* Warm cream-yellow for body paragraphs (14:1 contrast on navy) */
+  --cream-body: #FEF3C7;
+  --white-warm: #FDFBF7;     /* Warm white for card titles & emphasis (16:1 contrast) */
 
-  --primary: #a9b4ff;
-  --primary-foreground: #101828;
+  /* UI Tokens */
+  --background: #0A1628;     /* Deep navy page background */
+  --foreground: #FEF3C7;     /* Warm cream body text */
 
-  --navy: #a9b4ff;
-  --navy-foreground: #101828;
-  --cream: #101828;
-  --ink: #f7f5f0;
-  --ink-soft: #b9c2d6;
+  --card: #0F1B2D;           /* Slightly lighter navy card */
+  --card-foreground: #FEF3C7;
 
-  --secondary: #232f4b;
-  --secondary-foreground: #e7ecf8;
+  --popover: #0F1B2D;
+  --popover-foreground: #FEF3C7;
 
-  --muted: #1e2841;
-  --muted-foreground: #b9c2d6;
+  /* Primary Button: #F59E0B with navy text #0A1628 */
+  --primary: #F59E0B;
+  --primary-foreground: #0A1628;
 
-  --accent: #232f4b;
-  --accent-foreground: #e7ecf8;
+  /* Secondary: elevated navy with amber text */
+  --secondary: #1A365D;
+  --secondary-foreground: #FBBF24;
 
-  --destructive: #ff9a9a;
-  --destructive-foreground: #101828;
+  --muted: #0F1B2D;
+  --muted-foreground: #FDE68A; /* High readability amber-tinted muted text (9.5:1 on navy) */
 
-  --success: #9ae6b4;
-  --success-foreground: #101828;
+  --accent: #1A365D;
+  --accent-foreground: #FCD34D;
 
-  --border: #59678a;
-  --input: #8b98b8;
-  --ring: #a9b4ff;
+  --destructive: #EF4444;
+  --destructive-foreground: #0A1628;
+
+  --success: #10B981;
+  --success-foreground: #0A1628;
+
+  --border: rgba(245, 158, 11, 0.25);  /* Visible amber border */
+  --input: rgba(245, 158, 11, 0.3);
+  --ring: #F59E0B;
+
+  --shadow-soft: 0 2px 4px 0 rgba(0, 0, 0, 0.4), 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+  --shadow-float: 0 4px 8px 0 rgba(0, 0, 0, 0.5), 0 24px 48px -15px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 35px rgba(245, 158, 11, 0.35);
+  --shadow-amber-hover: 0 0 30px rgba(245, 158, 11, 0.2);
 }
 
 @layer base {
@@ -282,12 +341,11 @@
     height: auto;
   }
 
-  /* Prevent flex children from overflowing */
   .flex {
     min-width: 0;
   }
 
-  /* Headings are serif — the signature of an academic brand */
+  /* Headings: serif with soft gold #FCD34D in dark mode */
   h1,
   h2,
   h3,
@@ -297,7 +355,17 @@
     letter-spacing: -0.018em;
   }
 
-  /* Keep UI micro-copy in the geometric sans so it stays crisp */
+  .dark h1,
+  .dark h2,
+  .dark h3 {
+    color: #FCD34D;
+  }
+
+  /* Paragraphs in dark mode: warm cream-yellow #FEF3C7 */
+  .dark p {
+    color: #FEF3C7;
+  }
+
   button,
   input,
   select,
@@ -307,18 +375,16 @@
   }
 
   ::selection {
-    background-color: var(--navy);
-    color: var(--navy-foreground);
+    background-color: #F59E0B;
+    color: #0A1628;
   }
 
-  /* Visible, high-contrast focus for every keyboard user */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
     border-radius: 4px;
   }
 
-  /* Center overlay for gear dial */
   .overlay-center {
     position: fixed;
     inset: 0;
@@ -328,7 +394,6 @@
     z-index: 50;
   }
 
-  /* Gear dial responsive sizing */
   .gear-dial {
     position: relative;
     width: min(340px, 75vw);
@@ -339,7 +404,6 @@
     margin: auto;
   }
 
-  /* Thumb-friendly targets on touch devices (min 44px) */
   @media (pointer: coarse) {
     button,
     a,
@@ -354,7 +418,6 @@
     font-variant-numeric: tabular-nums lining-nums;
   }
 
-  /* Respect the reader: no autoplaying motion for anyone who asked */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -385,60 +448,92 @@
     text-transform: uppercase;
   }
 
-  /* Warm paper texture — the "printed page" feel */
+  /* Section heading amber underline rule (PART 6) */
+  .amber-rule {
+    width: 40px;
+    height: 3px;
+    background: #F59E0B;
+    border-radius: 2px;
+    margin-top: 8px;
+  }
+
+  .amber-rule-center {
+    width: 40px;
+    height: 3px;
+    background: #F59E0B;
+    border-radius: 2px;
+    margin-top: 8px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Hero amber radial gradient (PART 7-1) */
+  .hero-amber-radial {
+    background: radial-gradient(ellipse at top left, rgba(245, 158, 11, 0.1), transparent 60%),
+      radial-gradient(ellipse at bottom right, rgba(245, 158, 11, 0.08), transparent 60%),
+      #0A1628;
+  }
+
+  /* Primary button gradient (PART 7-2) */
+  .btn-amber-primary {
+    background: linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%);
+    color: #0A1628 !important;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+    transition: all 0.2s ease;
+  }
+  .btn-amber-primary:hover {
+    background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+    box-shadow: 0 6px 22px rgba(245, 158, 11, 0.5);
+  }
+
+  /* Amber section divider (PART 7-4) */
+  .divider-amber-fade {
+    height: 1px;
+    width: 100%;
+    background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.4), transparent);
+  }
+
+  /* Card amber hover glow (PART 3-C, PART 7-3) */
+  .dark .lift:hover,
+  .dark .card-amber:hover {
+    border-color: #F59E0B !important;
+    box-shadow: 0 0 35px rgba(245, 158, 11, 0.25) !important;
+  }
+
+  /* Warm paper texture in light mode, deep navy lattice in dark mode */
   .paper {
     background-color: var(--background);
-    background-image: radial-gradient(
-        rgb(26 54 93 / 0.035) 1px,
-        transparent 1px
-      ),
-      radial-gradient(rgb(26 54 93 / 0.025) 1px, transparent 1px);
-    background-size: 26px 26px, 26px 26px;
-    background-position: 0 0, 13px 13px;
+  }
+  .dark .paper {
+    background-color: #0A1628;
+    background-image: radial-gradient(rgba(245, 158, 11, 0.04) 1px, transparent 1px);
+    background-size: 28px 28px;
   }
 
   .bg-grid {
     background-image: linear-gradient(
         to right,
-        color-mix(in oklch, var(--navy) 8%, transparent) 1px,
+        rgba(245, 158, 11, 0.08) 1px,
         transparent 1px
       ),
       linear-gradient(
         to bottom,
-        color-mix(in oklch, var(--navy) 8%, transparent) 1px,
+        rgba(245, 158, 11, 0.08) 1px,
         transparent 1px
       );
     background-size: 40px 40px;
-  }
-
-  .bg-dots {
-    background-image: radial-gradient(
-      color-mix(in oklch, var(--navy) 16%, transparent) 1px,
-      transparent 1px
-    );
-    background-size: 22px 22px;
   }
 
   .mask-fade-b {
     mask-image: linear-gradient(to bottom, black 55%, transparent 100%);
   }
 
-  .mask-fade-x {
-    mask-image: linear-gradient(
-      to right,
-      transparent,
-      black 12%,
-      black 88%,
-      transparent
-    );
-  }
-
   .glass {
-    background-color: color-mix(in oklch, var(--card) 78%, transparent);
+    background-color: rgba(15, 27, 45, 0.85);
     backdrop-filter: blur(14px) saturate(150%);
   }
 
-  /* The card lift: subtle, shadowed, always the same 320ms */
   .lift {
     transition:
       transform 0.32s var(--ease-editorial),
@@ -453,9 +548,9 @@
   .skeleton {
     background: linear-gradient(
       90deg,
-      var(--muted) 25%,
-      color-mix(in oklch, var(--border) 80%, transparent) 37%,
-      var(--muted) 63%
+      #0F1B2D 25%,
+      rgba(245, 158, 11, 0.15) 37%,
+      #0F1B2D 63%
     );
     background-size: 400% 100%;
     animation: var(--animate-shimmer);
@@ -483,15 +578,6 @@
     animation-delay: 0.34s;
   }
 
-  .reveal {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  .reveal-in {
-    animation: var(--animate-fade-up);
-    animation-duration: 0.4s;
-  }
-
   .sr-only-focusable:not(:focus) {
     position: absolute;
     width: 1px;
@@ -507,6 +593,5 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklch, var(--ink-soft) 40%, transparent)
-    transparent;
+  scrollbar-color: rgba(245, 158, 11, 0.35) transparent;
 }

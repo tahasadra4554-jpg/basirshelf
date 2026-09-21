@@ -72,7 +72,7 @@ export function AuthForm({
 
       {fields.map((field) => (
         <div key={field.name} className="space-y-2">
-          <Label htmlFor={field.name}>{field.label}</Label>
+          <Label htmlFor={field.name} className="text-[#FBBF24]">{field.label}</Label>
           <Input
             id={field.name}
             name={field.name}
@@ -81,15 +81,15 @@ export function AuthForm({
             placeholder={field.placeholder}
             autoComplete={field.autoComplete}
             required={field.required ?? true}
-            className="text-start"
+            className="text-start border-amber-500/30 bg-[#0A1628] text-[#FEF3C7] focus-visible:border-[#F59E0B]"
           />
         </div>
       ))}
 
-      <Button type="submit" className="w-full" size="lg" disabled={pending}>
+      <Button type="submit" className="w-full btn-amber-primary" size="lg" disabled={pending}>
         {pending ? (
           <>
-            <LoaderCircle className="animate-spin" />
+            <LoaderCircle className="animate-spin text-[#0A1628]" />
             Working…
           </>
         ) : (
@@ -97,14 +97,14 @@ export function AuthForm({
         )}
       </Button>
 
-      <p className="text-center text-xs leading-6 text-muted-foreground">
+      <p className="text-center text-xs leading-6 text-[#FEF3C7]/70">
         Teachers sign in from the{" "}
         <Link
           href="/teacher-login"
-          className="font-semibold text-primary hover:underline"
+          className="font-semibold text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
         >
           dedicated teacher page
-        </Link>{" "}
+        </Link>
         .
       </p>
     </form>

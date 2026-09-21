@@ -18,11 +18,11 @@ export default function SignupPage() {
         "No card or payment required",
       ]}
       footer={
-        <p className="text-center text-sm text-muted-foreground">
+        <p className="text-center text-sm text-[#FEF3C7]/80">
           Already registered?{" "}
           <Link
             href="/login"
-            className="font-semibold text-primary hover:underline"
+            className="font-semibold text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
           >
             Sign in
           </Link>

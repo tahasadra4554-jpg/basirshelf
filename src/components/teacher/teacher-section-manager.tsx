@@ -195,7 +195,7 @@ export function TeacherSectionManager({
                         href={section.audio_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate text-indigo-text hover:underline dark:text-indigo"
+                        className="truncate text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
                       >
                         Audio
                       </a>
@@ -320,7 +320,7 @@ export function TeacherSectionManager({
                           href={section.audio_url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-text hover:underline dark:text-indigo"
+                          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
                         >
                           <Music className="size-3.5" />
                           Audio

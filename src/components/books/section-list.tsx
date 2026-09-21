@@ -40,7 +40,7 @@ const Lightbox = dynamic(() => import("yet-another-react-lightbox"), {
  * Next to each unit is ONE single sleek gear icon:
  * - Always visible on mobile
  * - Appears on hover on desktop
- * - Turns indigo with a 90° rotation on hover
+ * - Turns gold with a 90° rotation on hover
  * - Tapping it opens the REAL, INTERACTIVE, ROTATING GEAR WHEEL DIAL modal!
  */
 export function SectionList({
@@ -147,25 +147,25 @@ export function SectionList({
           return (
             <li
               key={section.id}
-              className="group flex flex-col justify-between rounded-2xl border border-border bg-card p-4 shadow-soft transition-all duration-300 hover:border-border/80 hover:bg-accent/30 hover:shadow-float sm:p-5"
+              className="group flex flex-col justify-between rounded-2xl border border-amber-500/25 bg-card p-4 shadow-soft transition-all duration-300 hover:border-[#F59E0B] hover:bg-[#FEF3C7]/30 dark:hover:bg-[#1A365D]/30 hover:shadow-[0_0_25px_rgba(245,158,11,0.2)] sm:p-5"
             >
               <div className="flex items-center gap-3.5 sm:gap-4">
                 <span
-                  className="num-latin grid size-10 shrink-0 place-items-center rounded-xl bg-secondary font-serif text-sm font-semibold text-secondary-foreground transition-transform duration-300 group-hover:scale-105 sm:size-11 sm:text-base"
+                  className="num-latin grid size-10 shrink-0 place-items-center rounded-xl border border-amber-500/30 bg-[#FEF3C7] dark:bg-[#1A365D] font-serif text-sm font-semibold text-[#1A365D] dark:text-[#FDFBF7] transition-transform duration-300 group-hover:scale-105 sm:size-11 sm:text-base"
                   aria-hidden="true"
                 >
                   {number}
                 </span>
 
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-serif text-base leading-snug font-semibold text-navy sm:text-[17px]">
+                  <h3 className="font-serif text-base leading-snug font-semibold text-foreground transition-colors duration-200 group-hover:text-[#D97706] dark:group-hover:text-[#FCD34D] sm:text-[17px]">
                     {section.title}
                   </h3>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                     {video ? (
                       <span className="inline-flex items-center gap-1">
                         <PlayCircle
-                          className="size-3.5 text-indigo-text dark:text-indigo"
+                          className="size-3.5 text-[#F59E0B]"
                           aria-hidden="true"
                         />
                         Video
@@ -174,7 +174,7 @@ export function SectionList({
                     {hasAudio ? (
                       <span className="inline-flex items-center gap-1">
                         <Music
-                          className="size-3.5 text-indigo-text dark:text-indigo"
+                          className="size-3.5 text-[#F59E0B]"
                           aria-hidden="true"
                         />
                         Audio
@@ -183,7 +183,7 @@ export function SectionList({
                     {hasHandout ? (
                       <span className="inline-flex items-center gap-1">
                         <FileText
-                          className="size-3.5 text-indigo-text dark:text-indigo"
+                          className="size-3.5 text-[#F59E0B]"
                           aria-hidden="true"
                         />
                         PDF
@@ -192,14 +192,14 @@ export function SectionList({
                     {hasImage ? (
                       <span className="inline-flex items-center gap-1">
                         <ImageIcon
-                          className="size-3.5 text-indigo-text dark:text-indigo"
+                          className="size-3.5 text-[#F59E0B]"
                           aria-hidden="true"
                         />
                         Images
                       </span>
                     ) : null}
                     {!video && !hasImage && !hasAudio && !hasHandout ? (
-                      <span className="inline-flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 text-[#FEF3C7]/60">
                         <Clock className="size-3.5" aria-hidden="true" />
                         In preparation
                       </span>
@@ -210,9 +210,8 @@ export function SectionList({
                 <div className="flex shrink-0 items-center gap-2">
                   {/* 
                     ONE Single Gear Icon:
-                    - Always visible on mobile
-                    - Appears on hover on desktop
-                    - Subtle gray by default (#94A3B8), turns indigo on hover with 90° rotation
+                    - Amber gear icon on navy surface
+                    - Turns gold with a 90° rotation on hover
                     - Clicking opens the full-screen mechanical Gear Dial!
                   */}
                   <button
@@ -220,17 +219,14 @@ export function SectionList({
                     onClick={() => setActiveGearSection(section)}
                     aria-label={`Open interactive gear dial for ${section.title}`}
                     className={cn(
-                      "group/gear relative grid size-10 shrink-0 place-items-center rounded-xl border border-transparent transition-all duration-200 ease-out",
-                      // Mobile: always visible. Desktop: appears on unit hover
-                      "opacity-100 sm:opacity-80 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
-                      // Subtle gray by default (#94A3B8), turns indigo on hover
-                      "text-[#94A3B8] hover:border-border/50 hover:bg-accent/60 hover:text-[#5A67D8]",
-                      // Accessible focus ring
-                      "focus-visible:ring-2 focus-visible:ring-indigo focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "group/gear relative grid size-10 shrink-0 place-items-center rounded-xl border border-amber-500/30 bg-[#1A365D]/60 text-[#F59E0B] transition-all duration-200 ease-out",
+                      "opacity-100 sm:opacity-90 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
+                      "hover:border-amber-500/60 hover:bg-amber-500/15 hover:text-[#FCD34D] hover:shadow-[0_0_15px_rgba(245,158,11,0.3)]",
+                      "focus-visible:ring-2 focus-visible:ring-[#F59E0B] focus-visible:ring-offset-2 focus-visible:outline-none",
                     )}
                   >
                     <Settings
-                      className="size-5 transition-transform duration-200 ease-out group-hover/gear:rotate-90"
+                      className="size-5 transition-transform duration-300 ease-out group-hover/gear:rotate-90"
                       aria-hidden="true"
                     />
                   </button>

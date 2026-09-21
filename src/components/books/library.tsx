@@ -70,8 +70,6 @@ export function Library({ books }: { books: Book[] }) {
     syncQueryToUrl(query);
   }, [query]);
 
-  const featured = filtered[0];
-  const rest = filtered.slice(1);
   const searching = normalize(query).length > 0;
 
   return (
@@ -82,7 +80,7 @@ export function Library({ books }: { books: Book[] }) {
         <div
           role="group"
           aria-label="Library view"
-          className="flex shrink-0 items-center gap-1 rounded-full border border-border bg-card p-1 shadow-soft"
+          className="flex shrink-0 items-center gap-1 rounded-full border border-amber-500/30 bg-[#0F1B2D] p-1 shadow-soft"
         >
           {(
             [
@@ -99,8 +97,8 @@ export function Library({ books }: { books: Book[] }) {
                 "inline-flex h-9 items-center gap-2 rounded-full px-3.5 text-[13px] font-medium transition-all duration-300",
                 "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 view === id
-                  ? "bg-navy text-navy-foreground shadow-soft"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  ? "bg-[#1A365D] text-[#FCD34D] border border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+                  : "text-[#FEF3C7]/70 hover:bg-amber-500/10 hover:text-[#FCD34D]",
               )}
             >
               <Icon className="size-4" aria-hidden="true" />
@@ -111,29 +109,34 @@ export function Library({ books }: { books: Book[] }) {
         </div>
       </div>
 
-      <p className="num-latin mb-5 text-xs text-muted-foreground" aria-live="polite">
+      <p className="num-latin mb-5 text-xs text-[#FEF3C7]/70" aria-live="polite">
         Showing {filtered.length} of {books.length} books
         {searching ? ` matching “${query}”` : ""}
       </p>
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/70 px-6 py-14 text-center">
-          <span className="grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-amber-500/30 bg-[#0F1B2D]/70 px-6 py-14 text-center">
+          <span className="grid size-12 place-items-center rounded-2xl bg-[#1A365D] text-[#F59E0B]">
             <BookX className="size-6" aria-hidden="true" />
           </span>
-          <h3 className="font-serif text-lg font-semibold text-navy">
+          <h3 className="font-serif text-lg font-semibold text-[#FDFBF7]">
             Nothing matches that search
           </h3>
-          <p className="max-w-sm text-sm leading-7 text-muted-foreground">
+          <p className="max-w-sm text-sm leading-7 text-[#FEF3C7]/80">
             Try “Interchange”, a level such as “Intermediate”, or clear the
             field to see the whole shelf.
           </p>
-          <Button variant="outline" size="sm" onClick={() => setQuery("")}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQuery("")}
+            className="border-amber-500/40 text-[#FCD34D] hover:bg-amber-500/10"
+          >
             Clear search
           </Button>
         </div>
       ) : view === "text" ? (
-        <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+        <ul className="divide-y divide-amber-500/20 overflow-hidden rounded-2xl border border-amber-500/25 bg-[#0F1B2D] shadow-soft">
           {filtered.map((book, index) => (
             <BookCard
               key={book.id}
