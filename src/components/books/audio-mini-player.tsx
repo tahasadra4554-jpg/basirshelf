@@ -640,15 +640,15 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
               </div>
             </div>
 
-            {/* STEP 3-D: BUTTONS DECK (row of 6 buttons with solid cream backing tray) */}
-            <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full px-2.5 py-1.5 rounded-2xl bg-[#F5EFE6]/95 border border-[#1A365D]/20 shadow-[0_8px_20px_rgba(26,54,93,0.18)]">
+            {/* STEP 3-D: BUTTONS DECK (row of 6 buttons matching the cassette beige shell) */}
+            <div className="flex items-center justify-between gap-1.5 sm:gap-2 w-full px-3 py-2 rounded-xl bg-[#E7DECE] border border-[#B8AB96] shadow-[0_6px_16px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.6)]">
               {/* 1. Rewind (-10s) */}
               <button
                 type="button"
                 onClick={() => seekDelta(-10)}
                 aria-label="Rewind 10 seconds"
                 title="Rewind 10s (Left Arrow)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-xl border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
               >
                 <RotateCcw className="size-4 sm:size-5" />
               </button>
@@ -663,10 +663,10 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   animation:
                     isPlaying && !prefersReduced ? "cassette-play-pulse 2s infinite" : "none",
                 }}
-                className={`flex size-12 sm:size-14 items-center justify-center rounded-2xl border transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer ${
+                className={`flex size-12 sm:size-14 items-center justify-center rounded-xl border transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer ${
                   isPlaying
-                    ? "border-[#5A67D8] bg-[#5A67D8] text-white shadow-[0_4px_14px_rgba(90,103,216,0.45),inset_0_-2px_0_rgba(0,0,0,0.25)]"
-                    : "border-[#1A365D]/25 bg-[#FAF6EE] text-[#1A365D] shadow-[0_3px_8px_rgba(0,0,0,0.12),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:bg-white"
+                    ? "border-[#5A67D8] bg-[#5A67D8] text-white shadow-[0_4px_14px_rgba(90,103,216,0.5),inset_0_-2px_0_rgba(0,0,0,0.25)]"
+                    : "border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_3px_8px_rgba(0,0,0,0.12),inset_0_-2px_0_rgba(0,0,0,0.1)] hover:bg-white"
                 }`}
               >
                 {isPlaying ? (
@@ -682,7 +682,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 onClick={stopPlayback}
                 aria-label="Stop audio"
                 title="Stop (Reset to 0:00)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-xl border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
               >
                 <Square className="size-4 sm:size-5 fill-current" />
               </button>
@@ -693,7 +693,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 onClick={() => seekDelta(10)}
                 aria-label="Fast forward 10 seconds"
                 title="Forward 10s (Right Arrow)"
-                className="flex size-10 sm:size-12 items-center justify-center rounded-xl border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
               >
                 <RotateCw className="size-4 sm:size-5" />
               </button>
@@ -704,7 +704,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                 onClick={cycleSpeed}
                 aria-label="Playback speed"
                 title={`Speed: ${playbackRate}x (click to change)`}
-                className="flex size-10 sm:size-12 items-center justify-center rounded-xl border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
               >
                 <span className="font-mono text-xs sm:text-sm font-bold">
                   {playbackRate}x
@@ -721,7 +721,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                   }}
                   aria-label={isMuted ? "Unmute audio" : "Mute audio"}
                   title="Volume control"
-                  className="flex size-10 sm:size-12 items-center justify-center rounded-xl border border-[#1A365D]/20 bg-[#FAF6EE] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.06),inset_0_-2px_0_rgba(0,0,0,0.08)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
+                  className="flex size-10 sm:size-12 items-center justify-center rounded-lg border border-[#B8AB96] bg-[#F7F2E7] text-[#1A365D] shadow-[0_2px_4px_rgba(0,0,0,0.08),inset_0_-2px_0_rgba(0,0,0,0.1)] transition-all active:scale-95 active:shadow-[inset_0_2px_4px_rgba(0,0,0,0.25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#5A67D8] cursor-pointer hover:bg-white"
                 >
                   {isMuted || volume === 0 ? (
                     <VolumeX className="size-4 sm:size-5" />
@@ -737,7 +737,7 @@ export function AudioMiniPlayer({ track, onClose }: AudioMiniPlayerProps) {
                       initial={{ opacity: 0, y: 6, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.95 }}
-                      className="absolute bottom-full right-0 mb-2 flex items-center gap-2 rounded-xl border border-[#1A365D]/25 bg-[#FAF6EE] p-2.5 shadow-xl z-40"
+                      className="absolute bottom-full right-0 mb-2 flex items-center gap-2 rounded-xl border border-[#B8AB96] bg-[#F7F2E7] p-2.5 shadow-xl z-40"
                     >
                       <button
                         type="button"
