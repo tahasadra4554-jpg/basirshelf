@@ -98,6 +98,8 @@ export function SectionList({
           title: section.title,
           audioUrl: section.audio_url,
           bookTitle,
+          unitNumber: section.sort_order,
+          sectionId: section.id,
         });
         break;
       }
