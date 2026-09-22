@@ -143,7 +143,7 @@ interface Spark {
   opacity: number;
 }
 interface GearDialModalProps {
-  section: Section | null;
+  section: (Section & { files?: import("@/lib/types").SectionFile[] }) | null;
   bookTitle?: string;
   onClose: () => void;
   onSelectOption: (optionId: "video" | "audio" | "images" | "pdf", section: Section) => void;
@@ -163,18 +163,24 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const rawImages = section?.images_url || section?.image_url;
-  const hasImages = Boolean(rawImages && rawImages.trim().length > 0);
-  const hasVideo = Boolean(section?.video_url && section.video_url.trim().length > 0);
-  const hasAudio = Boolean(section?.audio_url && section.audio_url.trim().length > 0);
-  const hasHandout = Boolean(section?.handout_url && section.handout_url.trim().length > 0);
+  const files = (section as any)?.files as import("@/lib/types").SectionFile[] | undefined;
+  const hasImages = files ? files.some((f) => f.type === "image") : Boolean((section?.images_url || section?.image_url) && (section?.images_url || section?.image_url || "").trim().length > 0);
+  const hasVideo = files ? files.some((f) => f.type === "video") : Boolean(section?.video_url && section.video_url.trim().length > 0);
+  const hasAudio = files ? files.some((f) => f.type === "audio") : Boolean(section?.audio_url && section.audio_url.trim().length > 0);
+  const hasHandout = files ? files.some((f) => f.type === "pdf") : Boolean(section?.handout_url && section.handout_url.trim().length > 0);
+  const countFor = (t: string) => files ? files.filter((f) => f.type === (t === "images" ? "image" : t === "pdf" ? "pdf" : t).replace("images","image")).length : 0;
 
-  // FIX 2: Deeper, premium palette
+  // FIX 2: Deeper, premium palette + counts
+  const vCount = files ? files.filter((f) => f.type === "video").length : (hasVideo ? 1 : 0);
+  const aCount = files ? files.filter((f) => f.type === "audio").length : (hasAudio ? 1 : 0);
+  const iCount = files ? files.filter((f) => f.type === "image").length : (hasImages ? 1 : 0);
+  const pCount = files ? files.filter((f) => f.type === "pdf").length : (hasHandout ? 1 : 0);
+
   const options = [
     {
       id: "video" as const,
       label: "Video",
-      subtitle: "Watch lesson video",
+      subtitle: vCount > 0 ? `${vCount} video${vCount > 1 ? "s" : ""} available` : "Watch lesson video",
       icon: Play,
       baseAngle: 0,
       badgeBg: "#DC2626",
@@ -184,11 +190,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       labelColor: "#DC2626",
       buttonGradient: "linear-gradient(135deg, #DC2626, #B91C1C)",
       available: hasVideo,
+      count: vCount,
     },
     {
       id: "audio" as const,
       label: "Audio",
-      subtitle: "Listen to audio lesson",
+      subtitle: aCount > 0 ? `${aCount} audio${aCount > 1 ? "s" : ""} available` : "Listen to audio lesson",
       icon: Headphones,
       baseAngle: 90,
       badgeBg: "#7C3AED",
@@ -198,11 +205,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       labelColor: "#7C3AED",
       buttonGradient: "linear-gradient(135deg, #7C3AED, #6D28D9)",
       available: hasAudio,
+      count: aCount,
     },
     {
       id: "images" as const,
       label: "Images",
-      subtitle: "Open image gallery",
+      subtitle: iCount > 0 ? `${iCount} image${iCount > 1 ? "s" : ""} available` : "Open image gallery",
       icon: ImageIcon,
       baseAngle: 180,
       badgeBg: "#059669",
@@ -212,11 +220,12 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       labelColor: "#059669",
       buttonGradient: "linear-gradient(135deg, #059669, #047857)",
       available: hasImages,
+      count: iCount,
     },
     {
       id: "pdf" as const,
       label: "PDF",
-      subtitle: "Read lesson handout",
+      subtitle: pCount > 0 ? `${pCount} PDF${pCount > 1 ? "s" : ""} available` : "Read lesson handout",
       icon: FileText,
       baseAngle: 270,
       badgeBg: "#2563EB",
@@ -226,6 +235,7 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
       labelColor: "#2563EB",
       buttonGradient: "linear-gradient(135deg, #2563EB, #1D4ED8)",
       available: hasHandout,
+      count: pCount,
     },
   ];
 
@@ -510,10 +520,9 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
   const handleSelectActive = () => {
     if (!section) return;
     const active = options[activeIndex];
-    if (active.available) {
-      onSelectOption(active.id, section);
-      onClose();
-    }
+    // ALWAYS allow selection – even if no content, panel will show empty state
+    onSelectOption(active.id, section);
+    onClose();
   };
 
   if (!section) return null;
@@ -873,7 +882,6 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                               <span
                                 className={cn(
                                   "relative grid size-14 place-items-center rounded-full shadow-lg transition-all duration-300 border-2",
-                                  !opt.available && "opacity-40 grayscale",
                                 )}
                                 style={{
                                   background: opt.badgeBg,
@@ -956,40 +964,37 @@ export function GearDialModal({ section, bookTitle, onClose, onSelectOption }: G
                   <div>
                     <h4 className="font-serif text-base font-bold text-[#FDFBF7]">{activeOption.label}</h4>
                     <p className="text-xs text-[#FEF3C7]/80">
-                      {activeOption.available ? activeOption.subtitle : "Not available for this unit"}
+                      {activeOption.subtitle}
                     </p>
                   </div>
                 </div>
                 <span
                   className="rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase border transition-colors duration-300"
                   style={{
-                    borderColor: activeOption.available ? `${activeOption.labelColor}40` : "rgba(100,116,139,0.3)",
-                    background: activeOption.available ? `${activeOption.labelColor}18` : "rgba(30,41,59,0.8)",
-                    color: activeOption.available ? activeOption.labelColor : "#94A3B8",
+                    borderColor: `${activeOption.labelColor}40`,
+                    background: `${activeOption.labelColor}18`,
+                    color: activeOption.labelColor,
                   }}
                 >
-                  {activeOption.available ? "Ready" : "Unavailable"}
+                  Ready
                 </span>
               </div>
 
               <button
                 type="button"
                 onClick={handleSelectActive}
-                disabled={!activeOption.available}
                 className={cn(
                   "mt-3.5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold shadow-lg transition-all",
-                  activeOption.available
-                    ? "cursor-pointer text-white hover:brightness-110 active:scale-[0.98]"
-                    : "bg-[#1A365D]/50 text-[#FEF3C7]/30 border border-white/10 cursor-not-allowed",
+                  "cursor-pointer text-white hover:brightness-110 active:scale-[0.98]",
                 )}
-                style={
-                  activeOption.available
-                    ? { background: activeOption.buttonGradient, color: "#FFFFFF", boxShadow: activeOption.badgeGlow }
-                    : undefined
-                }
+                style={{
+                  background: activeOption.buttonGradient,
+                  color: "#FFFFFF",
+                  boxShadow: activeOption.badgeGlow,
+                }}
               >
-                <span>{activeOption.available ? `Open ${activeOption.label}` : `${activeOption.label} Unavailable`}</span>
-                {activeOption.available ? <ArrowRight className="size-4 text-white" /> : null}
+                <span>{`Open ${activeOption.label}`}</span>
+                <ArrowRight className="size-4 text-white" />
               </button>
             </div>
           </motion.div>

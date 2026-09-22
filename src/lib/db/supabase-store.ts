@@ -1,12 +1,12 @@
 import "server-only";
 
-import type { Book, BookWithSections, Section } from "@/lib/types";
+import type { Book, BookWithSections, Section, SectionFile, SectionWithFiles, BookWithSectionsAndFiles } from "@/lib/types";
 
 import { createAnonClient, createServiceClient } from "@/lib/supabase/client";
 import { withRls } from "@/lib/supabase/rls";
 
 const BOOK_SELECT =
-  "id, title, description, cover_image_url, teacher_id, created_at, teacher_name:profiles(full_name)";
+  "id, title, description, cover_image_url, teacher_id, created_at, sort_order, teacher_name:profiles(full_name)";
 
 type BookRow = Book & {
   teacher_name?: { full_name: string | null } | null;
@@ -49,12 +49,74 @@ function sortSections(sections: Section[]): Section[] {
   );
 }
 
+function sortFiles(files: SectionFile[]): SectionFile[] {
+  return [...files].sort(
+    (a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name) || a.created_at.localeCompare(b.created_at),
+  );
+}
+
+function filesFromLegacySection(section: Section): SectionFile[] {
+  const files: SectionFile[] = [];
+  const now = new Date().toISOString();
+  if (section.video_url && section.video_url.trim()) {
+    files.push({
+      id: `legacy-video-${section.id}`,
+      section_id: section.id,
+      type: "video",
+      name: `${section.title} - Video`,
+      url: section.video_url,
+      sort_order: 0,
+      created_at: now,
+    });
+  }
+  if (section.audio_url && section.audio_url.trim()) {
+    files.push({
+      id: `legacy-audio-${section.id}`,
+      section_id: section.id,
+      type: "audio",
+      name: `${section.title} - Audio`,
+      url: section.audio_url,
+      sort_order: 0,
+      created_at: now,
+    });
+  }
+  if (section.handout_url && section.handout_url.trim()) {
+    files.push({
+      id: `legacy-pdf-${section.id}`,
+      section_id: section.id,
+      type: "pdf",
+      name: `${section.title} - Handout`,
+      url: section.handout_url,
+      sort_order: 0,
+      created_at: now,
+    });
+  }
+  const rawImages = section.images_url || section.image_url;
+  if (rawImages && rawImages.trim()) {
+    const urls = rawImages.split(",").map((s) => s.trim()).filter(Boolean);
+    urls.forEach((url, idx) => {
+      if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("/")) return;
+      files.push({
+        id: `legacy-image-${section.id}-${idx}`,
+        section_id: section.id,
+        type: "image",
+        name: urls.length > 1 ? `${section.title} - Image ${idx + 1}` : `${section.title} - Image`,
+        url,
+        sort_order: idx,
+        created_at: now,
+      });
+    });
+  }
+  return files;
+}
+
 export const supabaseStore = {
   async listBooks(): Promise<Book[]> {
     const supabase = createAnonClient();
     const { data, error } = await supabase
       .from("books")
       .select(BOOK_SELECT)
+      .order("sort_order", { ascending: true })
       .order("title", { ascending: true });
     if (error) throw new Error(error.message);
     return attachCounts(
@@ -87,6 +149,60 @@ export const supabaseStore = {
     };
   },
 
+  async getBookWithFiles(id: string): Promise<BookWithSectionsAndFiles | null> {
+    const supabase = createAnonClient();
+    const { data, error } = await supabase
+      .from("books")
+      .select(BOOK_SELECT)
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    const book = normalizeBook(data as unknown as BookRow);
+    const { data: sections, error: sectionsError } = await supabase
+      .from("sections")
+      .select("*")
+      .eq("book_id", id)
+      .order("sort_order", { ascending: true });
+    if (sectionsError) throw new Error(sectionsError.message);
+
+    const sectionList = sortSections((sections ?? []) as Section[]);
+    let files: SectionFile[] = [];
+    try {
+      const { data: filesData, error: filesError } = await supabase
+        .from("section_files")
+        .select("*")
+        .in("section_id", sectionList.map((s) => s.id))
+        .order("sort_order", { ascending: true });
+      if (!filesError) {
+        files = sortFiles((filesData ?? []) as SectionFile[]);
+      }
+    } catch {
+      // table may not exist yet
+    }
+
+    // If no files in new table, fallback to legacy columns for each section
+    const hasNewFiles = files.length > 0;
+    const sectionsWithFiles: SectionWithFiles[] = sectionList.map((section) => {
+      let sectionFiles = files.filter((f) => f.section_id === section.id);
+      if (!hasNewFiles || sectionFiles.length === 0) {
+        // fallback to legacy
+        sectionFiles = filesFromLegacySection(section);
+      }
+      return {
+        ...section,
+        files: sortFiles(sectionFiles),
+      };
+    });
+
+    return {
+      ...book,
+      section_count: sectionList.length,
+      sections: sectionsWithFiles,
+    };
+  },
+
   /** Every teacher manages the whole catalogue, so this ignores the id. */
   async listBooksByTeacher(teacherId: string): Promise<Book[]> {
     void teacherId;
@@ -94,6 +210,7 @@ export const supabaseStore = {
     const { data, error } = await supabase
       .from("books")
       .select(BOOK_SELECT)
+      .order("sort_order", { ascending: true })
       .order("title", { ascending: true });
     if (error) throw new Error(error.message);
     return attachCounts(
@@ -110,6 +227,51 @@ export const supabaseStore = {
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
     return sortSections((data ?? []) as Section[]);
+  },
+
+  async listSectionFiles(sectionId: string): Promise<SectionFile[]> {
+    const supabase = createAnonClient();
+    try {
+      const { data, error } = await supabase
+        .from("section_files")
+        .select("*")
+        .eq("section_id", sectionId)
+        .order("sort_order", { ascending: true });
+      if (error) throw new Error(error.message);
+      if (data && data.length > 0) return sortFiles(data as SectionFile[]);
+    } catch {
+      // fallback
+    }
+    // Fallback to legacy section data
+    try {
+      const { data: sectionData } = await supabase
+        .from("sections")
+        .select("*")
+        .eq("id", sectionId)
+        .maybeSingle();
+      if (sectionData) {
+        return sortFiles(filesFromLegacySection(sectionData as Section));
+      }
+    } catch {}
+    return [];
+  },
+
+  async listFilesByBook(bookId: string): Promise<SectionFile[]> {
+    const supabase = createAnonClient();
+    const sections = await this.listSections(bookId);
+    if (sections.length === 0) return [];
+    try {
+      const { data, error } = await supabase
+        .from("section_files")
+        .select("*")
+        .in("section_id", sections.map((s) => s.id))
+        .order("sort_order", { ascending: true });
+      if (!error && data && data.length > 0) {
+        return sortFiles(data as SectionFile[]);
+      }
+    } catch {}
+    // Fallback
+    return sortFiles(sections.flatMap((s) => filesFromLegacySection(s)));
   },
 
   async createBook(input: {
@@ -263,6 +425,56 @@ export const supabaseStore = {
     return withRls("teacher", actorId, async (client) => {
       const { data, error } = await client
         .from("sections")
+        .delete()
+        .eq("id", id)
+        .select("id");
+      if (error) throw new Error(error.message);
+      return (data?.length ?? 0) > 0;
+    });
+  },
+
+  async createSectionFile(
+    input: { section_id: string; type: string; name: string; url: string; sort_order?: number | null },
+    actorId: string,
+  ): Promise<SectionFile> {
+    return withRls("teacher", actorId, async (client) => {
+      const { data, error } = await client
+        .from("section_files")
+        .insert({
+          section_id: input.section_id,
+          type: input.type,
+          name: input.name,
+          url: input.url,
+          sort_order: input.sort_order ?? 0,
+        })
+        .select("*")
+        .single();
+      if (error) throw new Error(error.message);
+      return data as SectionFile;
+    });
+  },
+
+  async updateSectionFile(
+    id: string,
+    patch: Partial<Pick<SectionFile, "name" | "url" | "sort_order" | "type">>,
+    actorId: string,
+  ): Promise<SectionFile | null> {
+    return withRls("teacher", actorId, async (client) => {
+      const { data, error } = await client
+        .from("section_files")
+        .update(patch)
+        .eq("id", id)
+        .select("*")
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as SectionFile | null) ?? null;
+    });
+  },
+
+  async deleteSectionFile(id: string, actorId: string): Promise<boolean> {
+    return withRls("teacher", actorId, async (client) => {
+      const { data, error } = await client
+        .from("section_files")
         .delete()
         .eq("id", id)
         .select("id");

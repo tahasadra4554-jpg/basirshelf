@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { Library } from "lucide-react";
 
-import type { BookWithSections } from "@/lib/types";
+import type { BookWithSectionsAndFiles } from "@/lib/types";
 
 import { getDataSource, usesSupabase } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -17,14 +17,19 @@ export default async function TeacherDashboardPage() {
   const session = await getSession();
   if (!session || session.role !== "teacher") redirect("/teacher-login");
 
-  let books: BookWithSections[] = [];
+  let books: BookWithSectionsAndFiles[] = [];
   let loadError: string | null = null;
   try {
     const catalogue = await getDataSource().listBooks();
     books = await Promise.all(
-      catalogue.map(async (book): Promise<BookWithSections> => {
-        const full = await getDataSource().getBook(book.id);
-        return full ?? { ...book, sections: [] };
+      catalogue.map(async (book): Promise<BookWithSectionsAndFiles> => {
+        try {
+          const full = await getDataSource().getBookWithFiles(book.id);
+          return full ?? { ...book, sections: [] };
+        } catch {
+          const fallback = await getDataSource().getBook(book.id);
+          return fallback ? { ...fallback, sections: fallback.sections.map((s) => ({ ...s, files: [] })) } : { ...book, sections: [] };
+        }
       }),
     );
   } catch (error) {
@@ -68,8 +73,8 @@ export default async function TeacherDashboardPage() {
 
         <p className="mt-5 max-w-2xl text-sm leading-7 text-[#FEF3C7]">
           All teachers share one catalogue: you can edit or extend any book,
-          not only the ones you created. Add units in course order and attach a
-          video link and a PDF handout when they are ready.
+          not only the ones you created. Add units in course order and attach
+          multiple videos, audios, PDFs and images per unit.
         </p>
       </header>
 

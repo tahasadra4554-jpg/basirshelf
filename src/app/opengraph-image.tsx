@@ -87,7 +87,7 @@ export default async function SiteOgImage() {
             }}
           >
             Structured videos and handouts for every unit of the Interchange
-            series.
+            and Connect series.
           </div>
         </div>
 
@@ -96,6 +96,7 @@ export default async function SiteOgImage() {
             "Interchange 1 · Elementary",
             "Interchange 2 · Pre-Intermediate",
             "Interchange 3 · Intermediate",
+            "Connect 1 · Beginner",
           ].map((label) => (
             <div
               key={label}

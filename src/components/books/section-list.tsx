@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import {
   Clock,
-  Download,
-  ExternalLink,
   FileText,
   Image as ImageIcon,
   Music,
@@ -14,63 +11,45 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import "yet-another-react-lightbox/styles.css";
-
-import type { Section } from "@/lib/types";
+import type { SectionFile, SectionFileType, SectionWithFiles } from "@/lib/types";
 
 import { cn } from "@/lib/utils";
 import { isSafeExternalUrl, parseVideo } from "@/lib/video";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AudioMiniPlayer, type AudioTrack } from "@/components/books/audio-mini-player";
+import { FileListModal } from "@/components/books/file-list-modal";
 import { GearDialModal } from "@/components/books/gear-dial-modal";
 import { PdfModalViewer } from "@/components/books/pdf-modal-viewer";
 import { UnitMedia } from "@/components/books/unit-media";
 import { VideoModalViewer } from "@/components/books/video-modal-viewer";
 
-// Dynamically import Lightbox to optimize bundle size
-const Lightbox = dynamic(() => import("yet-another-react-lightbox"), {
-  ssr: false,
-});
-
-/**
- * The unit list. Units keep their course order; each row shows at a glance
- * which media are ready.
- *
- * Next to each unit is ONE single sleek gear icon:
- * - Always visible on mobile
- * - Appears on hover on desktop
- * - Turns gold with a 90° rotation on hover
- * - Tapping it opens the REAL, INTERACTIVE, ROTATING GEAR WHEEL DIAL modal!
- */
 export function SectionList({
   sections,
   bookTitle,
 }: {
-  sections: Section[];
+  sections: SectionWithFiles[];
   bookTitle?: string;
 }) {
-  // Modal Dial State
-  const [activeGearSection, setActiveGearSection] = useState<Section | null>(null);
+  const [activeGearSection, setActiveGearSection] = useState<SectionWithFiles | null>(null);
 
-  // Internal Player States
   const [videoModalUrl, setVideoModalUrl] = useState<string | null>(null);
   const [videoModalTitle, setVideoModalTitle] = useState("");
 
   const [audioTrack, setAudioTrack] = useState<AudioTrack | null>(null);
 
-  const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [lightboxSlides, setLightboxSlides] = useState<{ src: string }[]>([]);
-
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [pdfModalTitle, setPdfModalTitle] = useState("");
+
+  const [fileListState, setFileListState] = useState<{
+    open: boolean;
+    type: SectionFileType;
+    files: SectionFile[];
+    section: SectionWithFiles | null;
+  }>({ open: false, type: "video", files: [], section: null });
 
   if (sections.length === 0) {
     return (
       <div className="px-6 py-14 text-center">
-        <p className="font-serif text-lg font-semibold text-navy">
-          No units yet
-        </p>
+        <p className="font-serif text-lg font-semibold text-navy">No units yet</p>
         <p className="mt-2 text-sm leading-7 text-muted-foreground">
           The teaching team will add the units for this book shortly.
         </p>
@@ -78,57 +57,142 @@ export function SectionList({
     );
   }
 
-  // Handle option selection from the Rotating Gear Dial
-  const handleSelectFromDial = (
-    option: "video" | "audio" | "images" | "pdf",
-    section: Section,
-  ) => {
-    switch (option) {
-      case "video": {
-        if (!section.video_url) return;
-        // Pause any active audio player
+  const openFileDirectly = (file: SectionFile, section: SectionWithFiles) => {
+    switch (file.type) {
+      case "video":
         window.dispatchEvent(new CustomEvent("basirshelf:pause-audio"));
-        setVideoModalUrl(section.video_url);
-        setVideoModalTitle(section.title);
+        setVideoModalUrl(file.url);
+        setVideoModalTitle(file.name);
         break;
-      }
-      case "audio": {
-        if (!section.audio_url) return;
+      case "audio":
         setAudioTrack({
-          title: section.title,
-          audioUrl: section.audio_url,
+          title: file.name,
+          audioUrl: file.url,
           bookTitle,
           unitNumber: section.sort_order,
           sectionId: section.id,
         });
         break;
-      }
-      case "images": {
-        const raw = section.images_url || section.image_url;
-        if (!raw) return;
-        const urls = raw
-          .split(",")
-          .map((s) => s.trim())
-          .filter(
-            (s) =>
-              Boolean(s) &&
-              (s.startsWith("http://") || s.startsWith("https://") || s.startsWith("/")),
-          );
-        if (urls.length === 0) {
-          toast.error("No valid image links found for this unit.");
-          return;
-        }
-        setLightboxSlides(urls.map((src) => ({ src })));
-        setLightboxOpen(true);
+      case "pdf":
+        setPdfModalUrl(file.url);
+        setPdfModalTitle(file.name);
         break;
-      }
-      case "pdf": {
-        if (!section.handout_url) return;
-        setPdfModalUrl(section.handout_url);
-        setPdfModalTitle(section.title);
+      case "image":
+        // For images, always show the grid modal with search — even for single file
+        // The FileListModal itself handles lightbox on click
+        setFileListState({
+          open: true,
+          type: "image",
+          files: section.files.filter((f) => f.type === "image"),
+          section,
+        });
         break;
-      }
     }
+  };
+
+  const handleSelectFromDial = (
+    option: "video" | "audio" | "images" | "pdf",
+    section: SectionWithFiles,
+  ) => {
+    const typeMap: Record<string, SectionFileType> = {
+      video: "video",
+      audio: "audio",
+      images: "image",
+      pdf: "pdf",
+    };
+    const fileType = typeMap[option];
+    const filesOfType = section.files.filter((f) => f.type === fileType);
+
+    if (filesOfType.length === 0) {
+      // Fallback to legacy fields — always show list with search for all types
+      if (option === "images") {
+        const raw = section.images_url || section.image_url;
+        if (raw) {
+          const urls = raw
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+            .filter((s) => s.startsWith("http") || s.startsWith("/"));
+          if (urls.length > 0) {
+            const fakeFiles: SectionFile[] = urls.map((url, idx) => ({
+              id: `legacy-${section.id}-${idx}`,
+              section_id: section.id,
+              type: "image" as const,
+              name: urls.length > 1 ? `${section.title} - Image ${idx + 1}` : `${section.title} - Image`,
+              url,
+              sort_order: idx,
+              created_at: new Date().toISOString(),
+            }));
+            setFileListState({ open: true, type: "image", files: fakeFiles, section });
+            return;
+          }
+        }
+      }
+      if (option === "video" && section.video_url) {
+        const fakeFile: SectionFile = {
+          id: `legacy-video-${section.id}`,
+          section_id: section.id,
+          type: "video",
+          name: `${section.title} - Video`,
+          url: section.video_url,
+          sort_order: 0,
+          created_at: new Date().toISOString(),
+        };
+        setFileListState({ open: true, type: "video", files: [fakeFile], section });
+        return;
+      }
+      if (option === "audio" && section.audio_url) {
+        const fakeFile: SectionFile = {
+          id: `legacy-audio-${section.id}`,
+          section_id: section.id,
+          type: "audio",
+          name: `${section.title} - Audio`,
+          url: section.audio_url,
+          sort_order: 0,
+          created_at: new Date().toISOString(),
+        };
+        setFileListState({ open: true, type: "audio", files: [fakeFile], section });
+        return;
+      }
+      if (option === "pdf" && section.handout_url) {
+        const fakeFile: SectionFile = {
+          id: `legacy-pdf-${section.id}`,
+          section_id: section.id,
+          type: "pdf",
+          name: `${section.title} - Handout`,
+          url: section.handout_url,
+          sort_order: 0,
+          created_at: new Date().toISOString(),
+        };
+        setFileListState({ open: true, type: "pdf", files: [fakeFile], section });
+        return;
+      }
+      // ALWAYS open panel even when no files – show empty state inside
+      setFileListState({ open: true, type: fileType, files: [], section });
+      return;
+    }
+
+    // Always show file list modal with search and names for all types (user request)
+    // Previously skipped list for single file, but user wants list like images for video/audio/pdf too
+    setFileListState({
+      open: true,
+      type: fileType,
+      files: filesOfType,
+      section,
+    });
+  };
+
+  const handleFileSelectFromList = (file: SectionFile) => {
+    if (!fileListState.section) return;
+    const section = fileListState.section;
+    setFileListState((prev) => ({ ...prev, open: false }));
+    setTimeout(() => {
+      // For images, FileListModal handles lightbox internally, so we don't need to open viewer
+      // But if user clicks Open button in list (for video/audio/pdf), open directly
+      if (file.type !== "image") {
+        openFileDirectly(file, section);
+      }
+    }, 200);
   };
 
   return (
@@ -136,12 +200,25 @@ export function SectionList({
       <ol className="grid w-full grid-cols-1 gap-4 lg:grid-cols-2">
         {sections.map((section, index) => {
           const number = section.sort_order || index + 1;
-          const video = parseVideo(section.video_url);
+          const videoCount = section.files.filter((f) => f.type === "video").length;
+          const audioCount = section.files.filter((f) => f.type === "audio").length;
+          const imageCount = section.files.filter((f) => f.type === "image").length;
+          const pdfCount = section.files.filter((f) => f.type === "pdf").length;
+
+          const legacyVideo = parseVideo(section.video_url);
           const rawImages = section.images_url || section.image_url;
-          const hasImage = isSafeExternalUrl(rawImages?.split(",")[0]?.trim() || "");
-          const hasAudio = isSafeExternalUrl(section.audio_url);
-          const hasHandout = isSafeExternalUrl(section.handout_url);
-          const hasMedia = Boolean(video) || hasImage || hasAudio;
+          const hasLegacyImage = isSafeExternalUrl(rawImages?.split(",")[0]?.trim() || "");
+          const hasLegacyAudio = isSafeExternalUrl(section.audio_url);
+          const hasLegacyHandout = isSafeExternalUrl(section.handout_url);
+          const hasMedia =
+            videoCount > 0 ||
+            audioCount > 0 ||
+            imageCount > 0 ||
+            pdfCount > 0 ||
+            Boolean(legacyVideo) ||
+            hasLegacyImage ||
+            hasLegacyAudio;
+
           const panelId = `unit-${section.id}-panel`;
 
           return (
@@ -162,43 +239,31 @@ export function SectionList({
                     {section.title}
                   </h3>
                   <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                    {video ? (
+                    {videoCount > 0 || legacyVideo ? (
                       <span className="inline-flex items-center gap-1">
-                        <PlayCircle
-                          className="size-3.5 text-[#F59E0B]"
-                          aria-hidden="true"
-                        />
-                        Video
+                        <PlayCircle className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
+                        Video {videoCount > 0 ? `(${videoCount})` : ""}
                       </span>
                     ) : null}
-                    {hasAudio ? (
+                    {audioCount > 0 || hasLegacyAudio ? (
                       <span className="inline-flex items-center gap-1">
-                        <Music
-                          className="size-3.5 text-[#F59E0B]"
-                          aria-hidden="true"
-                        />
-                        Audio
+                        <Music className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
+                        Audio {audioCount > 0 ? `(${audioCount})` : ""}
                       </span>
                     ) : null}
-                    {hasHandout ? (
+                    {pdfCount > 0 || hasLegacyHandout ? (
                       <span className="inline-flex items-center gap-1">
-                        <FileText
-                          className="size-3.5 text-[#F59E0B]"
-                          aria-hidden="true"
-                        />
-                        PDF
+                        <FileText className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
+                        PDF {pdfCount > 0 ? `(${pdfCount})` : ""}
                       </span>
                     ) : null}
-                    {hasImage ? (
+                    {imageCount > 0 || hasLegacyImage ? (
                       <span className="inline-flex items-center gap-1">
-                        <ImageIcon
-                          className="size-3.5 text-[#F59E0B]"
-                          aria-hidden="true"
-                        />
-                        Images
+                        <ImageIcon className="size-3.5 text-[#F59E0B]" aria-hidden="true" />
+                        Images {imageCount > 0 ? `(${imageCount})` : ""}
                       </span>
                     ) : null}
-                    {!video && !hasImage && !hasAudio && !hasHandout ? (
+                    {!hasMedia ? (
                       <span className="inline-flex items-center gap-1 text-[#FEF3C7]/60">
                         <Clock className="size-3.5" aria-hidden="true" />
                         In preparation
@@ -208,12 +273,6 @@ export function SectionList({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  {/* 
-                    ONE Single Gear Icon:
-                    - Amber gear icon on navy surface
-                    - Turns gold with a 90° rotation on hover
-                    - Clicking opens the full-screen mechanical Gear Dial!
-                  */}
                   <button
                     type="button"
                     onClick={() => setActiveGearSection(section)}
@@ -233,7 +292,6 @@ export function SectionList({
                 </div>
               </div>
 
-              {/* Optional inline media panel if expanded */}
               {hasMedia ? (
                 <div id={panelId} className="hidden">
                   <UnitMedia
@@ -250,37 +308,33 @@ export function SectionList({
         })}
       </ol>
 
-      {/* The Interactive Mechanical Rotating Gear Wheel Dial Modal */}
       <GearDialModal
         section={activeGearSection}
         bookTitle={bookTitle}
         onClose={() => setActiveGearSection(null)}
-        onSelectOption={handleSelectFromDial}
+        onSelectOption={handleSelectFromDial as any}
       />
 
-      {/* Internal Video Cinema Player Modal */}
+      {fileListState.section && (
+        <FileListModal
+          isOpen={fileListState.open}
+          onClose={() => setFileListState((prev) => ({ ...prev, open: false }))}
+          bookTitle={bookTitle ?? "Book"}
+          sectionTitle={fileListState.section.title}
+          type={fileListState.type}
+          files={fileListState.files}
+          onSelectFile={handleFileSelectFromList}
+        />
+      )}
+
       <VideoModalViewer
         url={videoModalUrl}
         unitTitle={videoModalTitle}
         onClose={() => setVideoModalUrl(null)}
       />
 
-      {/* Internal Audio Mini-Player Bar (Fixed at bottom) */}
-      <AudioMiniPlayer
-        track={audioTrack}
-        onClose={() => setAudioTrack(null)}
-      />
+      <AudioMiniPlayer track={audioTrack} onClose={() => setAudioTrack(null)} />
 
-      {/* Internal Image Lightbox Gallery */}
-      {lightboxOpen ? (
-        <Lightbox
-          open={lightboxOpen}
-          close={() => setLightboxOpen(false)}
-          slides={lightboxSlides}
-        />
-      ) : null}
-
-      {/* Internal PDF Modal Viewer */}
       <PdfModalViewer
         url={pdfModalUrl}
         unitTitle={pdfModalTitle}

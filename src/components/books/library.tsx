@@ -123,8 +123,8 @@ export function Library({ books }: { books: Book[] }) {
             Nothing matches that search
           </h3>
           <p className="max-w-sm text-sm leading-7 text-[#FEF3C7]/80">
-            Try “Interchange”, a level such as “Intermediate”, or clear the
-            field to see the whole shelf.
+            Try “Interchange”, “Connect”, a level such as “Intermediate”, or
+            clear the field to see the whole shelf.
           </p>
           <Button
             variant="outline"

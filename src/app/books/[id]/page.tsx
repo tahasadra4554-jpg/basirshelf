@@ -55,15 +55,36 @@ export default async function BookDetailPage({ params }: Params) {
 
   let book = null;
   try {
-    book = await getDataSource().getBook(id);
+    // Try new multi-file method first
+    book = await getDataSource().getBookWithFiles(id);
+    if (!book) {
+      const fallback = await getDataSource().getBook(id);
+      if (fallback) {
+        book = {
+          ...fallback,
+          sections: fallback.sections.map((s) => ({ ...s, files: [] })),
+        } as any;
+      }
+    }
   } catch {
-    book = null;
+    try {
+      const fallback = await getDataSource().getBook(id);
+      if (fallback) {
+        book = {
+          ...fallback,
+          sections: fallback.sections.map((s: any) => ({ ...s, files: [] })),
+        } as any;
+      }
+    } catch {
+      book = null;
+    }
   }
   if (!book) notFound();
 
   const level = levelForBook(book.title);
   const ready = book.sections.filter(
-    (section) =>
+    (section: any) =>
+      section.files?.length > 0 ||
       section.video_url ||
       section.handout_url ||
       section.image_url ||
@@ -71,7 +92,7 @@ export default async function BookDetailPage({ params }: Params) {
   );
   const playableUnit =
     book.sections.find(
-      (section) => section.video_url || section.audio_url || section.image_url,
+      (section: any) => section.files?.length > 0 || section.video_url || section.audio_url || section.image_url,
     ) ?? null;
 
   return (
@@ -131,7 +152,9 @@ export default async function BookDetailPage({ params }: Params) {
             <div className="min-w-0 md:col-span-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-amber-500/30 bg-amber-500/15 px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-[#92400E] dark:text-[#FBBF24] uppercase">
-                  Interchange Series
+                  {book.title.toLowerCase().includes("connect")
+                    ? "Connect Series"
+                    : "Interchange Series"}
                 </span>
                 {level ? (
                   <span className="rounded-full border border-amber-500/30 bg-card px-3 py-1 text-[10px] font-semibold tracking-[0.12em] text-muted-foreground uppercase">
@@ -150,12 +173,10 @@ export default async function BookDetailPage({ params }: Params) {
                 ) : null}
               </div>
 
-              {/* Book title */}
               <h1 className="mt-4 font-serif text-3xl leading-tight font-semibold tracking-tight text-foreground text-balance sm:text-4xl lg:text-5xl">
                 {book.title}
               </h1>
 
-              {/* Description */}
               <p className="mt-5 max-w-2xl text-sm leading-8 text-foreground/85 text-pretty sm:text-base">
                 {book.description ?? "No description yet."}
               </p>
@@ -221,7 +242,7 @@ export default async function BookDetailPage({ params }: Params) {
             </h2>
             <div className="amber-rule" />
             <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              Listed in course order. Tap the gear dial on any unit to spin and select your lesson media.
+              Listed in course order. Each unit can have unlimited videos, audios, PDFs and images. Tap the gear dial to browse files with search and gallery.
             </p>
           </div>
           <Link

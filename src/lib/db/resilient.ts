@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Book, BookWithSections, Section } from "@/lib/types";
+import type { Book, BookWithSections, Section, SectionFile, SectionWithFiles, BookWithSectionsAndFiles } from "@/lib/types";
 
 import { localStore } from "@/lib/db/local";
 import { supabaseStore } from "@/lib/db/supabase-store";
@@ -46,6 +46,12 @@ export const resilientStore = {
       () => localStore.getBook(id),
     ),
 
+  getBookWithFiles: (id: string) =>
+    preferSupabase(
+      () => supabaseStore.getBookWithFiles(id),
+      () => localStore.getBookWithFiles(id),
+    ),
+
   listBooksByTeacher: (teacherId: string) =>
     preferSupabase(
       () => supabaseStore.listBooksByTeacher(teacherId),
@@ -56,6 +62,18 @@ export const resilientStore = {
     preferSupabase(
       () => supabaseStore.listSections(bookId),
       () => localStore.listSections(bookId),
+    ),
+
+  listSectionFiles: (sectionId: string) =>
+    preferSupabase(
+      () => supabaseStore.listSectionFiles(sectionId),
+      () => localStore.listSectionFiles(sectionId),
+    ),
+
+  listFilesByBook: (bookId: string) =>
+    preferSupabase(
+      () => supabaseStore.listFilesByBook(bookId),
+      () => localStore.listFilesByBook(bookId),
     ),
 
   // Writes never fall back silently — the teacher must see the real error.
@@ -85,6 +103,20 @@ export const resilientStore = {
   deleteSection: (id: string, actorId: string) =>
     supabaseStore.deleteSection(id, actorId),
 
+  createSectionFile: (
+    input: Parameters<typeof supabaseStore.createSectionFile>[0],
+    actorId: string,
+  ) => supabaseStore.createSectionFile(input, actorId),
+
+  updateSectionFile: (
+    id: string,
+    patch: Parameters<typeof supabaseStore.updateSectionFile>[1],
+    actorId: string,
+  ) => supabaseStore.updateSectionFile(id, patch, actorId),
+
+  deleteSectionFile: (id: string, actorId: string) =>
+    supabaseStore.deleteSectionFile(id, actorId),
+
   uploadMedia: (
     file: Parameters<typeof supabaseStore.uploadMedia>[0],
     bucket: Parameters<typeof supabaseStore.uploadMedia>[1],
@@ -95,4 +127,4 @@ export const resilientStore = {
 
 export type DataSource = typeof resilientStore;
 
-export type { Book, BookWithSections, Section };
+export type { Book, BookWithSections, Section, SectionFile, SectionWithFiles, BookWithSectionsAndFiles };

@@ -1,0 +1,11 @@
+{
+  "name": "react-book-spine",
+  "version": "1.0.0",
+  "main": "index.jsx",
+  "types": "index.d.ts",
+  "description": "Premium realistic 3D book spine component – local implementation because npm package does not exist on registry (404)",
+  "peerDependencies": {
+    "react": ">=18",
+    "framer-motion": ">=6"
+  }
+}

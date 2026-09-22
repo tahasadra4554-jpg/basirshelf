@@ -63,7 +63,7 @@ export function BookCover({
       <div className="relative">
         <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-[#FBBF24] backdrop-blur">
           <BookOpen className="size-3 text-[#F59E0B]" aria-hidden="true" />
-          Interchange Series
+          {title.toLowerCase().includes("connect") ? "Connect Series" : "Interchange Series"}
         </span>
       </div>
 

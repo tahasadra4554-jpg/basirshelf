@@ -41,7 +41,7 @@ export default async function BookOgImage({
   const units = book?.sections.length ?? 0;
   const description = book?.description
     ? clip(book.description, 118)
-    : "Structured videos and handouts for every unit of the Interchange series.";
+    : "Structured videos and handouts for every unit of the Interchange and Connect series.";
 
   return new ImageResponse(
     (
@@ -77,7 +77,7 @@ export default async function BookOgImage({
               opacity: 0.85,
             }}
           >
-            Interchange Series
+            {title.toLowerCase().includes("connect") ? "Connect Series" : "Interchange Series"}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>

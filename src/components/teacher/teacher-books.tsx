@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import type { Book, BookWithSections } from "@/lib/types";
+import type { Book, BookWithSectionsAndFiles } from "@/lib/types";
 
 import { deleteBookAction } from "@/lib/actions";
 import { BookCover } from "@/components/books/book-cover";
@@ -34,7 +34,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function TeacherBooks({ books }: { books: BookWithSections[] }) {
+export function TeacherBooks({ books }: { books: BookWithSectionsAndFiles[] }) {
   const router = useRouter();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Book | null>(null);

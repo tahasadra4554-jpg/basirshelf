@@ -316,7 +316,56 @@ create policy "handouts_teacher_delete" on storage.objects
   using (bucket_id = 'handouts');
 
 -- ----------------------------------------------------------------------------
+-- 4. section_files — multiple files per section
+-- ----------------------------------------------------------------------------
+create table if not exists public.section_files (
+  id uuid primary key default gen_random_uuid(),
+  section_id uuid not null references public.sections (id) on delete cascade,
+  type text not null check (type in ('video', 'audio', 'pdf', 'image')),
+  name text not null,
+  url text not null,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists section_files_section_id_idx on public.section_files (section_id);
+create index if not exists section_files_section_id_type_idx on public.section_files (section_id, type);
+create index if not exists section_files_type_idx on public.section_files (type);
+create index if not exists section_files_sort_idx on public.section_files (section_id, type, sort_order);
+
+alter table public.section_files enable row level security;
+
+drop policy if exists "section_files_select" on public.section_files;
+create policy "section_files_select" on public.section_files
+  for select to anon, authenticated
+  using (true);
+
+drop policy if exists "section_files_insert_teacher" on public.section_files;
+create policy "section_files_insert_teacher" on public.section_files
+  for insert to authenticated
+  with check (public.is_teacher());
+
+drop policy if exists "section_files_update_teacher" on public.section_files;
+create policy "section_files_update_teacher" on public.section_files
+  for update to authenticated
+  using (public.is_teacher())
+  with check (public.is_teacher());
+
+drop policy if exists "section_files_delete_teacher" on public.section_files;
+create policy "section_files_delete_teacher" on public.section_files
+  for delete to authenticated
+  using (public.is_teacher());
+
+-- ----------------------------------------------------------------------------
 -- Realtime (optional, handy for live section updates)
 -- ----------------------------------------------------------------------------
 alter publication supabase_realtime add table public.books;
 alter publication supabase_realtime add table public.sections;
+DO $$
+BEGIN
+  BEGIN
+    alter publication supabase_realtime add table public.section_files;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+END $$;

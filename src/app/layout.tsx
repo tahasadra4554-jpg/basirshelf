@@ -29,10 +29,11 @@ export const metadata: Metadata = {
     template: "%s | BasirShelf",
   },
   description:
-    "Master English with the Basir Institute Standard. Structured videos and handouts for every unit of the Interchange series.",
+    "Master English with the Basir Institute Standard. Structured videos and handouts for every unit of the Interchange and Connect series.",
   keywords: [
     "language learning",
     "Interchange",
+    "Connect",
     "Basir Language Institute",
     "BasirShelf",
     "English course",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "BasirShelf — Basir Language Institute",
     description:
-      "Master English with the Basir Institute Standard. Structured videos and handouts for every unit of the Interchange series.",
+      "Master English with the Basir Institute Standard. Structured videos and handouts for every unit of the Interchange and Connect series.",
     type: "website",
     locale: "en_US",
     siteName: "BasirShelf",
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "BasirShelf — Basir Language Institute",
     description:
-      "Structured videos and handouts for every unit of the Interchange series.",
+      "Structured videos and handouts for every unit of the Interchange and Connect series.",
   },
 };
 

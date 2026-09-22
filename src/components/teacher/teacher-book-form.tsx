@@ -51,7 +51,7 @@ export function TeacherBookForm({
           id="book-title"
           name="title"
           defaultValue={book?.title ?? ""}
-          placeholder="e.g. Interchange 4"
+          placeholder="e.g. Connect 4 or Interchange 4"
           dir="ltr"
           className="text-start"
           required

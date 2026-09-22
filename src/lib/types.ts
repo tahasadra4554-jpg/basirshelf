@@ -14,6 +14,7 @@ export interface Book {
   cover_image_url: string | null;
   teacher_id: string | null;
   created_at: string;
+  sort_order?: number | null;
   /** Joined in queries: display name of the owning teacher */
   teacher_name?: string | null;
   /** Joined in queries: amount of published sections */
@@ -36,9 +37,29 @@ export interface Section {
   created_at: string;
 }
 
+export type SectionFileType = "video" | "audio" | "pdf" | "image";
+
+export interface SectionFile {
+  id: string;
+  section_id: string;
+  type: SectionFileType;
+  name: string;
+  url: string;
+  sort_order: number;
+  created_at: string;
+}
+
 /** A book bundled with its ordered sections (book detail page). */
 export interface BookWithSections extends Book {
   sections: Section[];
+}
+
+export interface SectionWithFiles extends Section {
+  files: SectionFile[];
+}
+
+export interface BookWithSectionsAndFiles extends Book {
+  sections: SectionWithFiles[];
 }
 
 export type ActionResult<T = undefined> =

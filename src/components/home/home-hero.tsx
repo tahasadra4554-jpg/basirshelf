@@ -7,6 +7,7 @@ const CHIPS = [
   { Icon: BadgeCheck, label: "Unit-by-unit structure" },
   { Icon: FileDown, label: "Offline PDF handouts" },
   { Icon: ShieldCheck, label: "No ads, ever" },
+  { Icon: BadgeCheck, label: "Two complete series — Interchange + Connect" },
 ];
 
 /**
@@ -91,8 +92,8 @@ export function HomeHero({
 
           <p className="mt-7 max-w-xl text-base leading-8 text-[#0A1628]/85 dark:text-[#FEF3C7] text-pretty sm:text-lg sm:leading-9">
             Structured videos and handouts for every unit of the Interchange
-            series — arranged in course order, so you always know exactly what
-            to study next.
+            and Connect series — arranged in course order, so you always know
+            exactly what to study next.
           </p>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
@@ -142,7 +143,10 @@ export function HomeHero({
 
             <ol className="mt-5 space-y-3">
               {[
-                { title: "Interchange 1", level: "Elementary", start: true },
+                { title: "Connect 1", level: "Beginner", start: true },
+                { title: "Connect 2", level: "High-Beginner", start: false },
+                { title: "Connect 3", level: "Low-Intermediate", start: false },
+                { title: "Interchange 1", level: "Elementary", start: false },
                 { title: "Interchange 2", level: "Pre-Intermediate", start: false },
                 { title: "Interchange 3", level: "Intermediate", start: false },
               ].map((book, index) => (

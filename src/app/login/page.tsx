@@ -13,7 +13,7 @@ export default function LoginPage() {
       title="Sign in to your student account"
       subtitle="Use the email and password you created when you signed up."
       highlights={[
-        "Access to the video and handout of every Interchange book",
+        "Access to the video and handout of every Interchange and Connect book",
         "Your learning path saved to your account",
         "Fast sign-in with email and password",
       ]}

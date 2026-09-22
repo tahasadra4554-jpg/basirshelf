@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { FileText, LoaderCircle, Music, Upload } from "lucide-react";
+import { LoaderCircle, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ActionResult, Section } from "@/lib/types";
@@ -17,11 +17,13 @@ export function TeacherSectionForm({
   section,
   nextOrder = 1,
   onDone,
+  compact = false,
 }: {
   bookId: string;
   section?: Section;
   nextOrder?: number;
   onDone: (message?: string) => void;
+  compact?: boolean;
 }) {
   const action = section ? updateSectionAction : createSectionAction;
   const [state, formAction, pending] = useActionState<
@@ -77,6 +79,63 @@ export function TeacherSectionForm({
     }
   }
 
+  if (compact) {
+    return (
+      <form action={formAction} className="space-y-4">
+        <input type="hidden" name="book_id" value={bookId} />
+        {section ? <input type="hidden" name="id" value={section.id} /> : null}
+        {/* Keep legacy fields hidden for backward compat */}
+        <input type="hidden" name="video_url" value={section?.video_url ?? ""} />
+        <input type="hidden" name="audio_url" value={section?.audio_url ?? ""} />
+        <input type="hidden" name="image_url" value={section?.image_url ?? ""} />
+        <input type="hidden" name="images_url" value={section?.images_url ?? section?.image_url ?? ""} />
+        <input type="hidden" name="handout_url" value={section?.handout_url ?? ""} />
+
+        <div className="space-y-2">
+          <Label htmlFor="section-title-compact">Unit title</Label>
+          <Input
+            id="section-title-compact"
+            name="title"
+            defaultValue={section?.title ?? ""}
+            placeholder="Unit 4 — My everyday life"
+            dir="ltr"
+            className="text-start"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="section-sort-compact">Sort order</Label>
+          <Input
+            id="section-sort-compact"
+            name="sort_order"
+            type="number"
+            min={0}
+            max={9999}
+            defaultValue={section?.sort_order ?? nextOrder}
+            dir="ltr"
+            className="text-start"
+          />
+        </div>
+
+        <DialogFooter>
+          <Button type="submit" disabled={pending} size="sm">
+            {pending ? (
+              <>
+                <LoaderCircle className="animate-spin" />
+                Saving…
+              </>
+            ) : section ? (
+              "Save title"
+            ) : (
+              "Add unit"
+            )}
+          </Button>
+        </DialogFooter>
+      </form>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="book_id" value={bookId} />
@@ -97,7 +156,7 @@ export function TeacherSectionForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="section-video">Video URL (optional)</Label>
+          <Label htmlFor="section-video">Video URL (legacy - optional)</Label>
           <Input
             id="section-video"
             name="video_url"
@@ -107,6 +166,7 @@ export function TeacherSectionForm({
             dir="ltr"
             className="text-start"
           />
+          <p className="text-[10px] text-muted-foreground">Legacy field - use Files manager for multiple videos</p>
         </div>
 
         <div className="space-y-2">
@@ -124,10 +184,10 @@ export function TeacherSectionForm({
         </div>
       </div>
 
-      {/* Audio URL (optional) */}
+      {/* Audio URL */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="section-audio-url">Audio URL (optional)</Label>
+          <Label htmlFor="section-audio-url">Audio URL (legacy)</Label>
           <label
             className={
               "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
@@ -139,7 +199,7 @@ export function TeacherSectionForm({
             ) : (
               <Upload className="size-3" aria-hidden="true" />
             )}
-            {uploadingAudio ? "Uploading…" : "Upload audio file"}
+            {uploadingAudio ? "Uploading…" : "Upload audio"}
             <input
               type="file"
               accept="audio/*"
@@ -163,15 +223,12 @@ export function TeacherSectionForm({
           dir="ltr"
           className="text-start"
         />
-        <p className="text-[11px] text-muted-foreground">
-          Listening practice: paste a direct audio link (MP3, WAV, etc.) or upload a file.
-        </p>
       </div>
 
-      {/* Images URL (optional, comma-separated) */}
+      {/* Images URL */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="section-images-url">Images URL (optional, comma-separated)</Label>
+          <Label htmlFor="section-images-url">Images URL (legacy)</Label>
           <label
             className={
               "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
@@ -207,17 +264,13 @@ export function TeacherSectionForm({
           dir="ltr"
           className="text-start"
         />
-        {/* Mirror to image_url hidden input for backward compatibility */}
         <input type="hidden" name="image_url" value={imagesUrl.split(",")[0]?.trim() || ""} />
-        <p className="text-[11px] text-muted-foreground">
-          Single image or comma-separated gallery image links for the lightbox.
-        </p>
       </div>
 
-      {/* Handout PDF (optional) */}
+      {/* Handout PDF */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="section-handout-url">Handout PDF (optional)</Label>
+          <Label htmlFor="section-handout-url">Handout PDF (legacy)</Label>
           <label
             className={
               "inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-amber-500/30 px-2.5 py-1 text-[11px] font-medium text-[#FEF3C7]/80 transition-colors duration-200 hover:border-amber-500/60 hover:text-[#FCD34D] hover:bg-amber-500/10" +
@@ -253,10 +306,11 @@ export function TeacherSectionForm({
           dir="ltr"
           className="text-start"
         />
-        <p className="text-[11px] text-muted-foreground">
-          Student handout: upload a PDF or paste a link.
-        </p>
       </div>
+
+      <p className="text-[11px] text-amber-500/80 border border-amber-500/20 rounded-lg p-2 bg-amber-500/5">
+        💡 New: After creating the unit, edit it to use the new Files Manager for unlimited videos, audios, PDFs and images with custom names.
+      </p>
 
       <DialogFooter>
         <Button type="submit" disabled={pending}>

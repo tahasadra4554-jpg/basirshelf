@@ -10,6 +10,9 @@ const LEVEL_BY_TITLE: Record<string, string> = {
   "Interchange 1": "Elementary",
   "Interchange 2": "Pre-Intermediate",
   "Interchange 3": "Intermediate",
+  "Connect 1": "Beginner",
+  "Connect 2": "High-Beginner",
+  "Connect 3": "Low-Intermediate",
 };
 
 export function levelForBook(title: string): string | null {

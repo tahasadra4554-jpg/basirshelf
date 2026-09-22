@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import type { ActionResult, Book, Section } from "@/lib/types";
+import type { ActionResult, Book, Section, SectionFile } from "@/lib/types";
 
 import { getDataSource, usesSupabase } from "@/lib/db";
 import { createSessionCookie, destroySessionCookie, getSession } from "@/lib/session";
@@ -34,6 +34,24 @@ const sectionSchema = z.object({
   images_url: z.string().trim().optional(),
   audio_url: urlField,
   sort_order: z.coerce.number().int().min(0).max(9999).optional(),
+});
+
+const sectionFileSchema = z.object({
+  section_id: z.string().uuid("Invalid section id"),
+  type: z.enum(["video", "audio", "pdf", "image"]),
+  name: z.string().trim().min(1, "Name is required").max(200),
+  url: z.string().trim().min(1, "URL is required").refine((v) => isSafeExternalUrl(v) || v.startsWith("/"), {
+    message: "URL must start with http/https or /",
+  }),
+  sort_order: z.coerce.number().int().min(0).max(9999).optional(),
+});
+
+const sectionFileUpdateSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(1).max(200).optional(),
+  url: z.string().trim().min(1).optional(),
+  sort_order: z.coerce.number().int().min(0).max(9999).optional(),
+  type: z.enum(["video", "audio", "pdf", "image"]).optional(),
 });
 
 const credentialsSchema = z.object({
@@ -86,7 +104,6 @@ export async function getCurrentUserAction(): Promise<{
   name: string | null;
   role: string;
 } | null> {
-  // 1. Try server client Supabase auth
   if (usesSupabase()) {
     try {
       const serverClient = await createSupabaseServerClient();
@@ -102,12 +119,9 @@ export async function getCurrentUserAction(): Promise<{
           role: meta.role === "teacher" ? "teacher" : "student",
         };
       }
-    } catch {
-      // Ignore
-    }
+    } catch {}
   }
 
-  // 2. Try session cookie (e.g. teachers or local session)
   const session = await getSession();
   if (session) {
     return {
@@ -147,7 +161,6 @@ export async function studentSignUpAction(
   let createdUser = false;
   let userId: string | null = null;
 
-  // 1. Try to create user via Service Role Admin (auto-confirms email so student never gets blocked by "Email not confirmed")
   if (serviceKey) {
     try {
       const serviceClient = createServiceClient();
@@ -175,7 +188,6 @@ export async function studentSignUpAction(
     }
   }
 
-  // 2. Fallback to standard signUp if not created via admin
   if (!createdUser) {
     const { data: signUpData, error: signUpError } = await serverClient.auth.signUp({
       email,
@@ -194,7 +206,6 @@ export async function studentSignUpAction(
 
     userId = signUpData?.user?.id ?? null;
 
-    // If unconfirmed, attempt auto-confirm with service role
     if (serviceKey && userId) {
       try {
         const serviceClient = createServiceClient();
@@ -203,14 +214,12 @@ export async function studentSignUpAction(
     }
   }
 
-  // 3. Immediately sign in the newly registered user to establish session cookies in browser
   let { data: signInData, error: signInError } = await serverClient.auth.signInWithPassword({
     email,
     password,
   });
 
   if (signInError && serviceKey) {
-    // If signin fails because email wasn't confirmed, auto-confirm and retry
     try {
       const serviceClient = createServiceClient();
       const linkRes = await serviceClient.auth.admin.generateLink({
@@ -226,7 +235,6 @@ export async function studentSignUpAction(
     } catch {}
   }
 
-  // 4. Also set the app session cookie
   const activeUserId = userId ?? signInData?.user?.id;
   if (activeUserId) {
     await createSessionCookie({
@@ -268,7 +276,6 @@ export async function studentLoginAction(
     password,
   });
 
-  // If Supabase rejected because email was unconfirmed, auto-confirm it using admin API and retry!
   if (error && (error.message.includes("not confirmed") || error.message.includes("Email not confirmed"))) {
     if (serviceKey) {
       try {
@@ -281,7 +288,6 @@ export async function studentLoginAction(
           await serviceClient.auth.admin.updateUserById(linkRes.data.user.id, {
             email_confirm: true,
           });
-          // Retry signing in now that email is confirmed!
           const retry = await serverClient.auth.signInWithPassword({
             email,
             password,
@@ -297,7 +303,6 @@ export async function studentLoginAction(
 
   if (error) return fail(translateAuthError(error.message));
 
-  // Also set the app session cookie for unified session state
   if (data?.user) {
     const meta = (data.user.user_metadata ?? {}) as {
       full_name?: string | null;
@@ -560,15 +565,106 @@ export async function deleteSectionAction(
   }
 }
 
+/* ------------------------------------------------------------------ *
+ * Section Files - Multi-file manager
+ * ------------------------------------------------------------------ */
+
+export async function createSectionFileAction(
+  _prev: ActionResult<SectionFile> | null,
+  formData: FormData,
+): Promise<ActionResult<SectionFile>> {
+  try {
+    const session = await requireTeacherFromCookie();
+    const parsed = sectionFileSchema.safeParse({
+      section_id: formData.get("section_id"),
+      type: formData.get("type"),
+      name: formData.get("name"),
+      url: formData.get("url"),
+      sort_order: formData.get("sort_order"),
+    });
+    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Validation error");
+
+    const sections = await allSections();
+    const section = sections.find((s) => s.id === parsed.data.section_id);
+    if (!section) return fail("Section not found.");
+
+    const file = await getDataSource().createSectionFile(
+      {
+        section_id: parsed.data.section_id,
+        type: parsed.data.type,
+        name: parsed.data.name,
+        url: parsed.data.url,
+        sort_order: parsed.data.sort_order ?? 0,
+      },
+      session.sub,
+    );
+
+    revalidatePath(`/books/${section.book_id}`);
+    revalidatePath("/teacher");
+    return { ok: true, data: file, message: `File “${file.name}” added.` };
+  } catch (error) {
+    return fail(toMessage(error));
+  }
+}
+
+export async function updateSectionFileAction(
+  _prev: ActionResult<SectionFile> | null,
+  formData: FormData,
+): Promise<ActionResult<SectionFile>> {
+  try {
+    const session = await requireTeacherFromCookie();
+    const parsed = sectionFileUpdateSchema.safeParse({
+      id: formData.get("id"),
+      name: formData.get("name"),
+      url: formData.get("url"),
+      sort_order: formData.get("sort_order"),
+      type: formData.get("type"),
+    });
+    if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Validation error");
+
+    const patch: Record<string, unknown> = {};
+    if (parsed.data.name !== undefined) patch.name = parsed.data.name;
+    if (parsed.data.url !== undefined) patch.url = parsed.data.url;
+    if (parsed.data.sort_order !== undefined) patch.sort_order = parsed.data.sort_order;
+    if (parsed.data.type !== undefined) patch.type = parsed.data.type;
+
+    const file = await getDataSource().updateSectionFile(parsed.data.id, patch as any, session.sub);
+    if (!file) return fail("File not found.");
+
+    // Need book_id for revalidation - fetch section
+    const sections = await allSections();
+    const section = sections.find((s) => s.id === file.section_id);
+    if (section) {
+      revalidatePath(`/books/${section.book_id}`);
+    }
+    revalidatePath("/teacher");
+    return { ok: true, data: file, message: `File “${file.name}” updated.` };
+  } catch (error) {
+    return fail(toMessage(error));
+  }
+}
+
+export async function deleteSectionFileAction(formData: FormData): Promise<ActionResult> {
+  try {
+    const session = await requireTeacherFromCookie();
+    const id = String(formData.get("id") ?? "");
+    if (!id) return fail("Invalid file id.");
+
+    const deleted = await getDataSource().deleteSectionFile(id, session.sub);
+    if (!deleted) return fail("Could not delete file.");
+
+    revalidatePath("/teacher");
+    // We don't have book_id here, but revalidate teacher and all book pages via layout
+    revalidatePath("/", "layout");
+    return { ok: true, message: "File deleted." };
+  } catch (error) {
+    return fail(toMessage(error));
+  }
+}
+
 /**
  * Uploads a teacher file to the matching public Supabase Storage bucket and
  * returns its public URL, so the form can store it on the book / unit.
- *
- * Buckets and allowed types:
- *   cover   → `covers`   (image/jpeg|png|webp, ≤ 8 MB)
- *   image   → `images`   (image/jpeg|png|webp|gif, ≤ 10 MB)
- *   audio   → `audio`    (common audio types, ≤ 50 MB)
- *   handout → `handouts` (application/pdf, ≤ 25 MB)
  */
 export type MediaKind = "cover" | "image" | "audio" | "handout";
 

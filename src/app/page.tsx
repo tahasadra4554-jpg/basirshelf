@@ -4,7 +4,7 @@ import type { Book } from "@/lib/types";
 
 import { degraded, getDataSource, lastError, usesSupabase } from "@/lib/db";
 
-import { Library } from "@/components/books/library";
+import { BookShelf } from "@/components/books/book-shelf";
 import { HomeHero } from "@/components/home/home-hero";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { WhyTrust } from "@/components/home/why-trust";
@@ -78,12 +78,13 @@ export default async function HomePage() {
             Course library
           </p>
           <h2 className="mt-3 font-serif text-3xl font-semibold tracking-tight text-[#1A365D] dark:text-[#FCD34D] text-balance sm:text-4xl">
-            Three books, one clear path
+            Six books, one clear path
           </h2>
           <div className="amber-rule" />
           <p className="mt-4 text-sm leading-8 text-muted-foreground text-pretty sm:text-base">
-            Start with Interchange 1 and move up as you are ready. Open any book
-            to see every unit, its video lesson and its PDF handout.
+            Start with Interchange 1 or Connect 1 and move up as you are ready.
+            Open any book to see every unit, its video lesson and its PDF
+            handout.
           </p>
         </div>
 
@@ -100,7 +101,7 @@ export default async function HomePage() {
             </p>
           </div>
         ) : (
-          <Library books={books} />
+          <BookShelf books={books} />
         )}
       </Container>
 

@@ -11,18 +11,16 @@ import {
   PlayCircle,
   Plus,
   Trash2,
-  Upload,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import type { BookWithSections, Section } from "@/lib/types";
+import type { BookWithSectionsAndFiles, SectionWithFiles, Section } from "@/lib/types";
 
-import {
-  deleteSectionAction,
-  uploadMediaAction,
-} from "@/lib/actions";
+import { deleteSectionAction } from "@/lib/actions";
 import { videoProvider } from "@/lib/utils";
 import { TeacherSectionForm } from "@/components/teacher/teacher-section-form";
+import { TeacherSectionFilesManager } from "@/components/teacher/teacher-section-files-manager";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,11 +43,11 @@ export function TeacherSectionManager({
   book,
   onChanged,
 }: {
-  book: BookWithSections;
+  book: BookWithSectionsAndFiles;
   onChanged: () => void;
 }) {
   const [addOpen, setAddOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Section | null>(null);
+  const [editTarget, setEditTarget] = useState<SectionWithFiles | null>(null);
   const [pending, startTransition] = useTransition();
 
   function refresh(message?: string) {
@@ -75,36 +73,8 @@ export function TeacherSectionManager({
     });
   }
 
-  async function handleUpload(file: File, section: Section) {
-    const formData = new FormData();
-    formData.set("kind", "handout");
-    formData.set("book_id", book.id);
-    formData.set("file", file);
-    const result = await uploadMediaAction(null, formData);
-    if (!result.ok || !result.data) {
-      toast.error(result.ok ? "Upload failed." : result.error);
-      return;
-    }
-
-    const update = new FormData();
-    update.set("id", section.id);
-    update.set("title", section.title);
-    update.set("video_url", section.video_url ?? "");
-    update.set("handout_url", result.data.url);
-    update.set("image_url", section.image_url ?? "");
-    update.set("images_url", section.images_url ?? section.image_url ?? "");
-    update.set("audio_url", section.audio_url ?? "");
-    update.set("sort_order", String(section.sort_order));
-
-    const { updateSectionAction } = await import("@/lib/actions");
-    const updated = await updateSectionAction(null, update);
-    if (updated.ok) {
-      toast.success("Handout uploaded and attached to the unit.");
-      onChanged();
-    } else {
-      toast.error(updated.error);
-    }
-  }
+  const countByType = (section: SectionWithFiles, type: string) =>
+    section.files.filter((f) => f.type === type).length;
 
   return (
     <div className="space-y-4">
@@ -112,8 +82,7 @@ export function TeacherSectionManager({
         <div>
           <h4 className="text-sm font-bold">Manage units</h4>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            For every unit you can attach a video link, an image, an audio file
-            and a PDF — uploaded or linked.
+            Each unit can have unlimited videos, audios, PDFs and images with names. Use the file manager to organize them.
           </p>
         </div>
         <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -128,7 +97,7 @@ export function TeacherSectionManager({
         </p>
       ) : (
         <>
-          {/* Mobile: stacked cards (block md:hidden) */}
+          {/* Mobile: stacked cards */}
           <div className="block space-y-3 md:hidden">
             {book.sections.map((section, index) => (
               <div
@@ -168,113 +137,60 @@ export function TeacherSectionManager({
 
                 <div className="grid grid-cols-2 gap-2 border-t border-border/50 pt-2 text-xs">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                      Video:
-                    </span>
-                    {section.video_url ? (
-                      <a
-                        href={section.video_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-primary hover:underline"
-                      >
-                        Link
-                      </a>
-                    ) : (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                        None
-                      </Badge>
-                    )}
+                    <Video className="size-3 text-red-500" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Videos:</span>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      {countByType(section, "video")}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                      Audio:
-                    </span>
-                    {section.audio_url ? (
-                      <a
-                        href={section.audio_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
-                      >
-                        Audio
-                      </a>
-                    ) : (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                        None
-                      </Badge>
-                    )}
+                    <Music className="size-3 text-purple-500" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Audios:</span>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      {countByType(section, "audio")}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                      Image:
-                    </span>
-                    {section.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={section.image_url}
-                        alt=""
-                        className="size-5 rounded object-cover"
-                      />
-                    ) : (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                        None
-                      </Badge>
-                    )}
+                    <ImageIcon className="size-3 text-emerald-500" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">Images:</span>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      {countByType(section, "image")}
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">
-                      PDF:
-                    </span>
-                    {section.handout_url ? (
-                      <a
-                        href={section.handout_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="truncate text-success hover:underline"
-                      >
-                        PDF
-                      </a>
-                    ) : (
-                      <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                        None
-                      </Badge>
-                    )}
+                    <FileText className="size-3 text-blue-500" />
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase">PDFs:</span>
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                      {countByType(section, "pdf")}
+                    </Badge>
                   </div>
                 </div>
 
-                <div className="border-t border-border/40 pt-2">
-                  <label className="flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
-                    <Upload className="size-3.5" />
-                    Upload PDF Handout
-                    <input
-                      type="file"
-                      accept="application/pdf"
-                      className="hidden"
-                      disabled={pending}
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (file) void handleUpload(file, section);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
+                <div className="flex flex-wrap gap-1.5 border-t border-border/40 pt-2">
+                  {section.files.slice(0, 3).map((f) => (
+                    <Badge key={f.id} variant="outline" className="text-[10px] truncate max-w-[120px]">
+                      {f.name}
+                    </Badge>
+                  ))}
+                  {section.files.length > 3 && (
+                    <Badge variant="secondary" className="text-[10px]">+{section.files.length - 3} more</Badge>
+                  )}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Desktop: clean table (hidden md:block) */}
+          {/* Desktop: table */}
           <div className="hidden overflow-x-auto rounded-xl border border-border bg-card md:block">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-16">Order</TableHead>
                   <TableHead>Unit title</TableHead>
-                  <TableHead className="w-32">Video</TableHead>
-                  <TableHead className="w-24">Image</TableHead>
-                  <TableHead className="w-24">Audio</TableHead>
-                  <TableHead className="w-40">PDF</TableHead>
+                  <TableHead className="w-20"><span className="flex items-center gap-1"><Video className="size-3" /> Videos</span></TableHead>
+                  <TableHead className="w-20"><span className="flex items-center gap-1"><Music className="size-3" /> Audios</span></TableHead>
+                  <TableHead className="w-20"><span className="flex items-center gap-1"><ImageIcon className="size-3" /> Images</span></TableHead>
+                  <TableHead className="w-20"><span className="flex items-center gap-1"><FileText className="size-3" /> PDFs</span></TableHead>
                   <TableHead className="w-24 text-end">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -286,81 +202,34 @@ export function TeacherSectionManager({
                     </TableCell>
                     <TableCell className="font-medium" dir="ltr">
                       <span className="block text-start">{section.title}</span>
+                      <span className="mt-1 flex flex-wrap gap-1">
+                        {section.files.slice(0, 2).map((f) => (
+                          <Badge key={f.id} variant="outline" className="text-[9px] px-1 py-0 max-w-[100px] truncate">
+                            {f.name}
+                          </Badge>
+                        ))}
+                        {section.files.length > 2 && <Badge variant="secondary" className="text-[9px]">+{section.files.length - 2}</Badge>}
+                      </span>
                     </TableCell>
                     <TableCell>
-                      {section.video_url ? (
-                        <a
-                          href={section.video_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                        >
-                          <PlayCircle className="size-3.5" />
-                          {videoProvider(section.video_url) ?? "Link"}
-                        </a>
-                      ) : (
-                        <Badge variant="secondary">Empty</Badge>
-                      )}
+                      <Badge variant={countByType(section, "video") > 0 ? "default" : "secondary"} className="bg-red-500 text-white">
+                        {countByType(section, "video")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      {section.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={section.image_url}
-                          alt={`${section.title} image`}
-                          className="size-9 rounded-lg border border-border object-cover"
-                        />
-                      ) : (
-                        <Badge variant="secondary">Empty</Badge>
-                      )}
+                      <Badge variant={countByType(section, "audio") > 0 ? "default" : "secondary"} className="bg-purple-500 text-white">
+                        {countByType(section, "audio")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      {section.audio_url ? (
-                        <a
-                          href={section.audio_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#FBBF24] hover:text-[#FCD34D] hover:underline"
-                        >
-                          <Music className="size-3.5" />
-                          Audio
-                        </a>
-                      ) : (
-                        <Badge variant="secondary">Empty</Badge>
-                      )}
+                      <Badge variant={countByType(section, "image") > 0 ? "default" : "secondary"} className="bg-emerald-500 text-white">
+                        {countByType(section, "image")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        {section.handout_url ? (
-                          <a
-                            href={section.handout_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-success hover:underline"
-                          >
-                            <Download className="size-3.5" />
-                            PDF
-                          </a>
-                        ) : (
-                          <Badge variant="secondary">Empty</Badge>
-                        )}
-
-                        <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-border px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary">
-                          <Upload className="size-3" />
-                          Upload
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            className="hidden"
-                            disabled={pending}
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              if (file) void handleUpload(file, section);
-                              event.target.value = "";
-                            }}
-                          />
-                        </label>
-                      </div>
+                      <Badge variant={countByType(section, "pdf") > 0 ? "default" : "secondary"} className="bg-blue-500 text-white">
+                        {countByType(section, "pdf")}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
@@ -398,15 +267,15 @@ export function TeacherSectionManager({
 
       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
         <FileText className="size-3.5" />
-        Uploads are stored in public Supabase Storage buckets: <code dir="ltr">covers</code>, <code dir="ltr">images</code>, <code dir="ltr">audio</code> and <code dir="ltr">handouts</code>.
+        Each unit now supports unlimited files. Uploads go to Supabase Storage buckets: <code dir="ltr">covers</code>, <code dir="ltr">images</code>, <code dir="ltr">audio</code> and <code dir="ltr">handouts</code>.
       </p>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add unit</DialogTitle>
             <DialogDescription>
-              Enter the unit title as it appears in the book; video and handout are optional.
+              Enter the unit title. You can add files after creation.
             </DialogDescription>
           </DialogHeader>
           <TeacherSectionForm
@@ -423,19 +292,31 @@ export function TeacherSectionManager({
         open={Boolean(editTarget)}
         onOpenChange={(open) => (open ? null : setEditTarget(null))}
       >
-        <DialogContent>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit unit</DialogTitle>
+            <DialogTitle>Edit unit — {editTarget?.title}</DialogTitle>
             <DialogDescription>
-              Replace a link or leave it empty to disable that button.
+              Update title/order and manage files with names. Unlimited files per type.
             </DialogDescription>
           </DialogHeader>
           {editTarget ? (
-            <TeacherSectionForm
-              bookId={book.id}
-              section={editTarget}
-              onDone={refresh}
-            />
+            <div className="space-y-6">
+              <TeacherSectionForm
+                bookId={book.id}
+                section={editTarget}
+                onDone={refresh}
+                compact
+              />
+              <div className="border-t border-border pt-6">
+                <h3 className="mb-4 text-sm font-bold">Files for this unit</h3>
+                <TeacherSectionFilesManager
+                  sectionId={editTarget.id}
+                  bookId={book.id}
+                  initialFiles={editTarget.files}
+                  onChanged={onChanged}
+                />
+              </div>
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>

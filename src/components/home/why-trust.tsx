@@ -14,8 +14,8 @@ const REASONS = [
   {
     Icon: ListChecks,
     title: "Unit-by-unit structured learning",
-    body: "Every book follows the Interchange curriculum in order, from the welcome unit to the final review. Nothing is out of place, nothing is missing.",
-    proof: "19 units per book, in course order",
+    body: "Every book follows the Interchange or Connect curriculum in order, from the welcome unit to the final review. Nothing is out of place, nothing is missing.",
+    proof: "Complete units per book, in course order",
   },
   {
     Icon: FolderOpen,
